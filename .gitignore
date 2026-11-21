@@ -24,6 +24,12 @@ data/*
 *.parquet
 *.pdf
 *.xlsx
+*.json.gz
+
+# Crawler cache (holds downloaded web pages)
+*.sqlite
+*.sqlite3
+*.db
 
 # OS / editors
 .DS_Store

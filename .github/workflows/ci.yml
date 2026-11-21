@@ -6,16 +6,22 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff
+      - name: Install
+        run: pip install ruff pytest pandas numpy phonenumbers
       - name: Lint
         run: ruff check .
       - name: Syntax check
-        run: python -m compileall -q src app notebooks
+        run: python -m compileall -q src app notebooks tools tests
+      - name: Cleaning tests
+        run: pytest -q
+      - name: No data files committed
+        run: |
+          found=$(git ls-files | grep -Ei '\.(csv|parquet|xlsx|sqlite3?|db)$' || true)
+          if [ -n "$found" ]; then echo "Data files must not be committed:"; echo "$found"; exit 1; fi

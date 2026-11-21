@@ -10,3 +10,10 @@ ignore = ["E501"]
 # Databricks notebooks get spark, dbutils, and display from the runtime.
 "notebooks/*" = ["F821", "E402", "I001"]
 "app/*" = ["E402"]
+# Cleaning + crawler keep their original compact style (one-line imports, a; b statements).
+"src/hackathon/cleaning.py" = ["E401", "E702", "I001"]
+"tools/*" = ["E401", "E702", "I001"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
