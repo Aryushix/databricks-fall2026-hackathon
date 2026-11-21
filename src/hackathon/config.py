@@ -1,6 +1,6 @@
 """One place for every name the project uses.
 
-Notebooks, the pipeline, and the app all read their catalog, schema, table,
+The notebooks and the app all read their catalog, schema, table,
 and endpoint names from here, so a teammate can point the whole project at a
 different schema by changing one widget or one environment variable.
 """

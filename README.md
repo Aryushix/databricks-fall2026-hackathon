@@ -2,123 +2,139 @@
 
 > **TODO:** one sentence on what we built and who it helps.
 
-| Teammate | GitHub | Owns |
+| Teammate | GitHub | Working on |
 | --- | --- | --- |
+| Brian | | |
 | TODO | | |
 
-## How it works
-
-```mermaid
-flowchart LR
-  A[Files in raw/ volume] -->|01 Auto Loader| B[(Bronze)]
-  B -->|02 clean| C[(Silver)]
-  C -->|03 SQL, 04 AI Functions| D[(Gold tables)]
-  E[PDFs in docs/ volume] -->|05 parse + chunk| F[(doc_chunks)]
-  F -->|05 embed| G[AI Search index]
-  G --> H[src/hackathon/rag.py]
-  H --> I[06 evaluate with MLflow]
-  H --> J[Streamlit demo app]
-  D --> K[Genie space / dashboards]
-```
-
-| Path | What it is |
-| --- | --- |
-| `notebooks/` | Run in order, `00` to `06`. Each has `catalog` / `schema` widgets at the top. |
-| `src/hackathon/config.py` | Every table, volume, and endpoint name in one place. |
-| `src/hackathon/rag.py` | Retrieve + answer. Used by notebook 06 **and** the app, so they always match. |
-| `app/app.py`, `app.yaml` | Streamlit chat UI, deployed with Databricks Apps. |
-| `pipelines/etl.py` | Optional scheduled version of notebooks 01 and 02, with data-quality rules. |
-| `eval/questions.jsonl` | Test questions + expected facts for evaluation. |
-| `databricks.yml` | Optional: deploy the pipeline and a refresh job with one command. |
-| `data/` | **No data in Git.** Data lives in Unity Catalog volumes; record sources in `data/README.md`. |
+**In one line:** we copy the Virtue Foundation health data into our own Databricks schema, clean it, join it into tables that answer our question, and show the results in a demo.
 
 ---
 
-## 1. Link this repo to Databricks (every teammate, about 5 minutes)
+## Start here
 
-**a. Use one shared workspace.** One person creates it (for example a [Databricks Free Edition](https://docs.databricks.com/aws/en/getting-started/free-edition) account) and invites the others: profile icon → **Settings** → **Workspace admin → Identity and access → Users** → add each teammate's email. Everyone then works on the same tables and the same AI Search index.
+| If you are... | Do this |
+| --- | --- |
+| **New to the team** | Steps 1 to 3 below (about 10 minutes) |
+| **Setting up the data the first time** | Step 4 (one person, once) |
+| **Back to keep working** | Click **Pull** in your Git folder, then open the notebook you own |
 
-**b. Connect your GitHub account.** Profile icon → **Settings → Linked accounts → Git integration** → provider **GitHub**. Either link with the Databricks GitHub App or paste a GitHub personal access token that can read and write this repo.
+**1. Get into the workspace.** Ask Brian to add your email in the team's Databricks workspace, then sign in with that email.
 
-**c. Clone the repo into your workspace.** **Workspace** → your user folder → **Create → Git folder**:
-- Git repository URL: `https://github.com/Aryushix/databricks-fall2026-hackathon.git`
-- Git provider: **GitHub**
-- Click **Create Git folder**.
+**2. Link GitHub to Databricks.** Click your profile icon (top right) → **Settings → Linked accounts → Add Git credential** → **GitHub**. Either **Link Git account**, or paste a GitHub *classic* personal access token with the `repo` scope.
 
-**d. Make your own branch.** Click the branch name at the top of the Git folder (the **Git** button) → create `yourname/what-youre-doing`. Commit and push from the same dialog.
+**3. Clone this repo into Databricks.** **Workspace** → your user folder → **Create → Git folder**:
+- URL: `https://github.com/Aryushix/databricks-fall2026-hackathon.git`
+- Provider: **GitHub**
 
-> Free Edition limits outbound internet to trusted domains. If the clone fails right away, check step (b) first, then try from a different workspace.
+**4. Load the data (only once for the whole team).** Open `notebooks/00b_load_virtue_foundation`, choose **Serverless** compute, click **Run all**. When it finishes, **Catalog → workspace → hackathon** has three `bronze_` tables.
 
-## 2. First-time setup (one person)
+---
 
-1. Open `notebooks/00_setup`, attach **Serverless** compute, click **Run all**. This creates schema `workspace.hackathon` and the volumes `raw`, `docs`, and `checkpoints`.
-2. Upload data: **Catalog → workspace → hackathon → raw → Upload to this volume**. Put each dataset in its own subfolder (`raw/orders/`). Put PDFs and other documents in `docs/`.
-3. Write down where each dataset came from in `data/README.md`.
+## How the data flows
 
-## 3. Run the notebooks
-
-Attach every notebook to **Serverless** compute. AI Functions don't work on classic clusters.
-
-| Notebook | What it does | Set these widgets |
-| --- | --- | --- |
-| `00_setup` | Schema + volumes | – |
-| `01_ingest_bronze` | New files in `raw/<dataset>/` → `bronze_<dataset>` (Auto Loader) | `dataset`, `format` |
-| `02_clean_silver` | Names, trimming, nulls, dedupe, **your rules** → `silver_<dataset>` | `dataset`, `keys` |
-| `03_gold_tables` | Business tables with comments (edit the examples) | – |
-| `04_ai_enrich` | `ai_classify`, `ai_extract`, `ai_mask`, `ai_query` on text columns | – |
-| `05_build_rag_index` | Parse docs → chunks → AI Search index (rerun after adding docs) | `search_endpoint` |
-| `06_ask_and_evaluate` | Ask questions, score answers with MLflow judges | – |
-
-## 4. Team workflow
-
-- **Pull before you start:** Git button → **Pull**.
-- **One branch per person.** Push it, open a pull request on GitHub, merge into `main`, and everyone pulls.
-- **Split work by file.** Two people editing the same notebook at once makes painful merge conflicts.
-- **Never commit data, tokens, or keys.** `.gitignore` blocks common data files. Store keys with Databricks secrets.
-- Change names in `src/hackathon/config.py` or in the widgets, never by hard-coding a table name.
-
-## 5. Demo app
-
-1. **Compute → Apps → Create app → Custom**, name it (e.g. `hackathon-demo`).
-2. Deploy, using your Git folder as the source code path, e.g. `/Workspace/Users/<you>/databricks-fall2026-hackathon`. Databricks installs `requirements.txt` and runs the command in `app.yaml`.
-3. Give the app access to the model and the index. In the app's settings, add these resources: the serving endpoint `databricks-gpt-oss-120b` (Can query) and the AI Search index `workspace.hackathon.doc_chunks_index`. If it still can't read the index, a workspace admin can grant its service principal access:
-   ```sql
-   GRANT USE CATALOG ON CATALOG workspace TO `<app-service-principal-id>`;
-   GRANT USE SCHEMA, SELECT ON SCHEMA workspace.hackathon TO `<app-service-principal-id>`;
-   ```
-4. On Free Edition, an app stops 24 hours after its last start. **Restart it right before the demo.**
-
-If you changed the catalog, schema, or model, update the matching values in `app.yaml`.
-
-## Configuration
-
-| Setting | Default | Override with |
-| --- | --- | --- |
-| Catalog | `workspace` | widget `catalog` / env `HACKATHON_CATALOG` |
-| Schema | `hackathon` | widget `schema` / env `HACKATHON_SCHEMA` |
-| Chat model | `databricks-gpt-oss-120b` | env `HACKATHON_LLM_ENDPOINT` |
-| Embedding model | `databricks-qwen3-embedding-0-6b` | env `HACKATHON_EMBEDDING_ENDPOINT` |
-| AI Search endpoint | `hackathon-search` | widget `search_endpoint` / env `HACKATHON_SEARCH_ENDPOINT` |
-
-Hosted model names change over time. Check **Serving** in the workspace if a model isn't found.
-
-## Optional: deploy with one command
-
-Requires the [Databricks CLI](https://docs.databricks.com/dev-tools/cli/) on your laptop and `databricks auth login`.
-
-```bash
-databricks bundle validate
-databricks bundle deploy          # creates the pipeline and the refresh job (dev mode: prefixed with your name)
-databricks bundle run refresh     # notebooks 01 → 02 → 03 → 05 on serverless
+```mermaid
+flowchart LR
+  S["Shared catalog<br/>(read-only)"] -->|00b copy| B[("bronze_*<br/>exact copies")]
+  B -->|02 clean| SV[("silver_*<br/>cleaned")]
+  SV -->|03 join + aggregate| G[("gold_*<br/>answers")]
+  SV -->|04 AI Functions| G
+  G --> D["Demo:<br/>Genie space / dashboard / app"]
 ```
+
+| Layer | Tables | Made by | Rule |
+| --- | --- | --- | --- |
+| Source | 3 tables in **Shares received** | Virtue Foundation | Read-only. We never change it. |
+| Bronze | `bronze_facilities`, `bronze_india_post_pincode_directory`, `bronze_nfhs_5_...` | `00b` | Exact copies, plus `_source_file` and `_ingested_at` |
+| Silver | `silver_<table>` | `02` | Fixed types, trimmed text, no duplicates, our cleaning rules |
+| Gold | `gold_<name>` | `03`, `04` | Joined and summarized tables the demo reads. Every table gets a `COMMENT`. |
+
+**The three source tables:**
+- `facilities`: health facility records from the Virtue Foundation.
+- `india_post_pincode_directory`: India's postal codes (pincodes) with the district and state each one belongs to.
+- `nfhs_5_district_health_...`: district-level health indicators from India's National Family Health Survey (NFHS-5, 2019–21).
+
+The likely join path is **facility → pincode → district → NFHS-5 indicators**. Check this on the real columns. District names often differ in spelling between tables.
+
+---
+
+## What's in this repo
+
+```
+notebooks/
+  00b_load_virtue_foundation.py  1. Copy the shared data into workspace.hackathon (run once)
+  02_clean_silver.py             2. Clean one table → silver_<table> (run once per table)
+  03_gold_tables.sql             3. Join and summarize → gold_ tables (write our logic here)
+  04_ai_enrich.sql               4. LLM functions on text columns: classify, extract, mask
+  05_build_rag_index.py          Optional: search index for a chatbot over documents
+  06_ask_and_evaluate.py         Optional: test the chatbot's answers
+src/hackathon/
+  config.py                      Every table, volume, and model name in one place
+  rag.py                         Chatbot logic, shared by notebook 06 and the app
+app/app.py, app.yaml             Optional: demo chat app (Databricks Apps)
+eval/questions.jsonl             Optional: test questions for notebook 06
+data/README.md                   Where the data lives and where it came from (no data in Git)
+.github/                         Automatic code check on every pull request
+```
+
+Notebook numbers show run order. There is no `01`: `00b` replaced the old file loader.
+
+**Where things live:** code is in GitHub. Tables are in Databricks under `workspace.hackathon`, and everyone on the team shares them. Never commit data files.
+
+---
+
+## Running the notebooks
+
+Always attach **Serverless** compute. AI Functions don't work on other compute.
+
+| Notebook | Set these widgets (top of the notebook) | Output |
+| --- | --- | --- |
+| `00b_load_virtue_foundation` | Nothing | `bronze_` copies of all three tables |
+| `02_clean_silver` | `dataset` = `facilities` (then each other table), `keys` = its ID column if it has one | `silver_<table>` and a null-count report |
+| `03_gold_tables` | Nothing. Edit the SQL. | Our `gold_` tables |
+| `04_ai_enrich` | Nothing. Replace the example table and column names. | AI-enriched `gold_` table |
+
+In `02_clean_silver`, put rules that only apply to one table in the cell marked **"4. Your dataset's rules"**.
+
+---
+
+## Team workflow
+
+1. **Pull before you start:** in your Git folder, click the branch name → **Pull**.
+2. **Work on your own branch:** branch name → **Create branch**, e.g. `brian/district-join`.
+3. **Own a file:** two people editing the same notebook at the same time causes conflicts that are hard to fix. Split work by notebook.
+4. **Commit and push:** branch name → write a message → **Commit & Push**.
+5. **Merge on GitHub:** open a pull request into `main`. A teammate glances at it, then merge. Everyone pulls.
+
+Never commit data, tokens, or API keys.
+
+---
+
+## How do I...
+
+**...refresh the data?** Rerun `00b_load_virtue_foundation`. Then rerun `02` and `03`.
+
+**...change the schema name (e.g. to test without touching the team's tables)?** Change the `schema` widget at the top of any notebook, or the default in `src/hackathon/config.py`.
+
+**...get a table as a CSV?** In a notebook:
+```python
+spark.table("workspace.hackathon.silver_facilities").toPandas().to_csv(
+    "/Volumes/workspace/hackathon/raw/silver_facilities.csv", index=False)
+```
+Then download it from **Catalog → workspace → hackathon → Volumes → raw**.
+
+**...ask the data questions in plain English?** **Genie Agents** (left sidebar) → **New** → add our `gold_` tables. Good table and column comments make Genie much more accurate.
+
+**...build the demo app?** Optional. See `app/app.py`. Create it under **Compute → Apps → Create app → Custom** with this Git folder as the source path. It also needs the chatbot index from `05`. On Free Edition an app stops 24 hours after its last start, so restart it before the demo.
+
+---
 
 ## Troubleshooting
 
 | Problem | Fix |
 | --- | --- |
-| AI Function or `vector_search` error | Attach **Serverless** compute (not a classic cluster or Pro/Classic SQL warehouse). |
-| `01_ingest_bronze` stops with a schema-change error | Expected when new columns appear. Run it again. |
-| Can't create an AI Search endpoint on Free Edition | Only one is allowed. Set the `search_endpoint` widget to the one that already exists. |
-| Index creation fails | The source table needs Change Data Feed (notebook 05 sets it), and no column may be named `_id`. |
-| Pipeline won't start on Free Edition | Only one active pipeline per type. Stop the other one. |
-| Model endpoint not found | Check **Serving** for current names, then set `HACKATHON_LLM_ENDPOINT`. |
+| `00b` says no shared catalog found | Open **Catalog → Shares received**, copy the start of the catalog name into the widget. |
+| "Permission denied" on `workspace.hackathon` | Ask Brian to run: ``GRANT ALL PRIVILEGES ON SCHEMA workspace.hackathon TO `you@andrew.cmu.edu` `` |
+| AI Function error | Switch the notebook to **Serverless** compute. |
+| Git folder won't clone | Redo step 2 (GitHub credential). Use the `https://` URL. |
+| Merge conflict in a notebook | Keep one person's version, then re-apply the other's change by hand. Next time, split files. |

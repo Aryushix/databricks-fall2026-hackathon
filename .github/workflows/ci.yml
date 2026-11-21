@@ -18,4 +18,4 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Syntax check
-        run: python -m compileall -q src app pipelines notebooks
+        run: python -m compileall -q src app notebooks

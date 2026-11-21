@@ -23,7 +23,7 @@ sys.path.append(os.path.abspath("../src"))
 from hackathon import from_widgets
 
 cfg = from_widgets(dbutils)
-dbutils.widgets.text("dataset", "orders", "Dataset")
+dbutils.widgets.text("dataset", "facilities", "Table name after bronze_")
 dbutils.widgets.text("keys", "", "Key column(s), comma-separated (optional)")
 dataset = dbutils.widgets.get("dataset")
 keys = [k.strip() for k in dbutils.widgets.get("keys").split(",") if k.strip()]
