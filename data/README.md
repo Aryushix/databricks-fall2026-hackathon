@@ -6,7 +6,7 @@ All data lives in Databricks (Unity Catalog), not in this repo. `.gitignore` blo
 
 | What | Where |
 | --- | --- |
-| Original Virtue Foundation data (read-only) | **Catalog → Shares received → `databricks_virtue_foundation_...` → `virtue_foundation_dataset`** |
+| Original Virtue Foundation data (read-only) | **Catalog → Shares received → `databricks_virtue_foundation_dataset_dais_2026` → `virtue_foundation_dataset`** |
 | Our copies (`bronze_*`), cleaned tables (`silver_*`), results (`gold_*`) | `workspace.hackathon` |
 | CSV exports and any extra files | Volume `/Volumes/workspace/hackathon/raw/` |
 | PDFs for the optional chatbot | Volume `/Volumes/workspace/hackathon/docs/` |

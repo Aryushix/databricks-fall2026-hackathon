@@ -27,7 +27,7 @@
 - URL: `https://github.com/Aryushix/databricks-fall2026-hackathon.git`
 - Provider: **GitHub**
 
-**4. Load the data (only once for the whole team).** Open `notebooks/00b_load_virtue_foundation`, choose **Serverless** compute, click **Run all**. When it finishes, **Catalog → workspace → hackathon** has three `bronze_` tables.
+**4. Load the data (only once for the whole team).** Open `notebooks/00b_load_virtue_foundation`, choose **Serverless** compute, click **Run all**. When it finishes, **Catalog → workspace → hackathon** has three `bronze_` tables. If the notebook stays on **Waiting**, run `sql/load_data_sql_editor.sql` in the **SQL Editor** instead. It makes the same tables.
 
 ---
 
@@ -74,6 +74,8 @@ src/hackathon/
 app/app.py, app.yaml             Optional: demo chat app (Databricks Apps)
 eval/questions.jsonl             Optional: test questions for notebook 06
 data/README.md                   Where the data lives and where it came from (no data in Git)
+sql/load_data_sql_editor.sql     Backup: load the data from the SQL Editor if notebooks won't start
+docs/databricks-tutorial.md      Our Databricks tutorial: cleaning, AI Functions, RAG, evaluation
 .github/                         Automatic code check on every pull request
 ```
 
@@ -133,8 +135,9 @@ Then download it from **Catalog → workspace → hackathon → Volumes → raw*
 
 | Problem | Fix |
 | --- | --- |
-| `00b` says no shared catalog found | Open **Catalog → Shares received**, copy the start of the catalog name into the widget. |
+| `00b` can't find the shared catalog | Put the full name `databricks_virtue_foundation_dataset_dais_2026` in the **Shared catalog (full name)** box at the top of `00b`. |
 | "Permission denied" on `workspace.hackathon` | Ask Brian to run: ``GRANT ALL PRIVILEGES ON SCHEMA workspace.hackathon TO `you@andrew.cmu.edu` `` |
+| A notebook cell stays on **Waiting** | Compute isn't starting. Click the green circle in the notebook toolbar to see why. To load the data anyway, run `sql/load_data_sql_editor.sql` in the **SQL Editor**. |
 | AI Function error | Switch the notebook to **Serverless** compute. |
 | Git folder won't clone | Redo step 2 (GitHub credential). Use the `https://` URL. |
 | Merge conflict in a notebook | Keep one person's version, then re-apply the other's change by hand. Next time, split files. |
