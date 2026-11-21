@@ -1,6 +1,9 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 02 · Clean Bronze → Silver
+# MAGIC # 02 · Clean Bronze → Silver (other tables)
+# MAGIC
+# MAGIC **Facilities are cleaned by `01_clean_facilities`, not here.** Use this notebook for
+# MAGIC `india_post_pincode_directory` and the NFHS-5 table.
 # MAGIC
 # MAGIC Generic cleaning that's safe for almost any dataset, then a clearly marked spot for your dataset's own rules:
 # MAGIC 1. `snake_case` column names
@@ -23,10 +26,12 @@ sys.path.append(os.path.abspath("../src"))
 from hackathon import from_widgets
 
 cfg = from_widgets(dbutils)
-dbutils.widgets.text("dataset", "facilities", "Table name after bronze_")
+dbutils.widgets.text("dataset", "india_post_pincode_directory", "Table name after bronze_")
 dbutils.widgets.text("keys", "", "Key column(s), comma-separated (optional)")
 dataset = dbutils.widgets.get("dataset")
 keys = [k.strip() for k in dbutils.widgets.get("keys").split(",") if k.strip()]
+if dataset == "facilities":
+    raise ValueError("Facilities have their own rules: run 01_clean_facilities instead.")
 
 bronze = spark.table(cfg.table(f"bronze_{dataset}"))
 print(f"bronze_{dataset}: {bronze.count():,} rows, {len(bronze.columns)} columns")

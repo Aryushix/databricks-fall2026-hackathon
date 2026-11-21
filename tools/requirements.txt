@@ -1,0 +1,6 @@
+# Laptop tools: tools/clean_dataset.py and tools/facility_crawler.py
+pandas>=2.0
+numpy
+phonenumbers
+httpx
+beautifulsoup4
