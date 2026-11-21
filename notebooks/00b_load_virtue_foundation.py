@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # 00b · Load the Virtue Foundation dataset
 # MAGIC
-# MAGIC The hackathon data arrives as a **read-only shared catalog** (Catalog → Shares received → `databricks_virtue_foundation_...`).
+# MAGIC The hackathon data arrives as a **read-only shared catalog** (Catalog → Shares received → `databricks_virtue_foundation_dataset_dais_2026`).
 # MAGIC This notebook copies each shared table into our writable schema as `bronze_<table>`, so the rest of the repo
 # MAGIC (`02_clean_silver` onward) can use it.
 # MAGIC
@@ -23,24 +23,31 @@ sys.path.append(os.path.abspath("../src"))
 from hackathon import from_widgets
 
 cfg = from_widgets(dbutils)
-dbutils.widgets.text("shared_catalog_prefix", "databricks_virtue_foundation", "Shared catalog name starts with")
+# Full name of the shared catalog. "catalog.schema" also works.
+dbutils.widgets.text("shared_catalog", "databricks_virtue_foundation_dataset_dais_2026", "Shared catalog (full name)")
 dbutils.widgets.text("shared_schema", "virtue_foundation_dataset", "Shared schema")
-prefix = dbutils.widgets.get("shared_catalog_prefix")
-shared_schema = dbutils.widgets.get("shared_schema")
+shared_catalog = dbutils.widgets.get("shared_catalog").strip().strip("`")
+shared_schema = dbutils.widgets.get("shared_schema").strip().strip("`")
+if "." in shared_catalog:
+    shared_catalog, shared_schema = [part.strip("`") for part in shared_catalog.split(".", 1)]
 
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {cfg.namespace} COMMENT 'Fall 2026 hackathon'")
-for volume in ["raw", "docs"]:  # raw: CSV exports and extra files · docs: PDFs for the optional chatbot
+for volume in ["raw", "docs"]:  # raw: CSV exports and extra files; docs: PDFs for the optional chatbot
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {cfg.namespace}.{volume}")
 
-matches = [row[0] for row in spark.sql("SHOW CATALOGS").collect() if row[0].startswith(prefix)]
-if not matches:
-    raise ValueError(
-        f"No catalog starting with '{prefix}'. Open Catalog → Shares received, copy the catalog name, "
-        "and put its first part in the 'Shared catalog name starts with' widget."
-    )
-shared_catalog = matches[0]
+if not shared_catalog:
+    visible = [row[0] for row in spark.sql("SHOW CATALOGS").collect()]
+    found = [name for name in visible if "virtue" in name.lower()]
+    if not found:
+        raise ValueError(
+            "Paste the shared catalog's full name into the 'Shared catalog (full name)' widget at the top. "
+            f"Catalogs this notebook can see: {visible}"
+        )
+    shared_catalog = found[0]
+
 source = f"`{shared_catalog}`.`{shared_schema}`"
 print(f"Copying from {source} into {cfg.namespace}")
+display(spark.sql(f"SHOW TABLES IN {source}"))
 
 # COMMAND ----------
 
@@ -48,8 +55,9 @@ for row in spark.sql(f"SHOW TABLES IN {source}").collect():
     name = row.tableName
     target = cfg.table(f"bronze_{name}")
     spark.sql(f"""
-        CREATE OR REPLACE TABLE {target} AS
-        SELECT *,
+        CREATE OR REPLACE TABLE {target}
+        TBLPROPERTIES ('delta.columnMapping.mode' = 'name')
+        AS SELECT *,
                '{shared_catalog}.{shared_schema}.{name}' AS _source_file,
                current_timestamp()                       AS _ingested_at
         FROM {source}.`{name}`
@@ -69,3 +77,15 @@ for table in spark.catalog.listTables(cfg.namespace):
     if table.name.startswith("bronze_"):
         print(f"\n=== {table.name}")
         spark.table(cfg.table(table.name)).printSchema()
+
+# COMMAND ----------
+
+# Give the team access to everything in our schema (run by the workspace admin)
+dbutils.widgets.text("grant_to", "account users", "Give access to (group or email)")
+principal = dbutils.widgets.get("grant_to")
+try:
+    spark.sql(f"GRANT USE CATALOG ON CATALOG {cfg.catalog} TO `{principal}`")
+    spark.sql(f"GRANT ALL PRIVILEGES ON SCHEMA {cfg.namespace} TO `{principal}`")
+    print(f"Granted access on {cfg.namespace} to {principal}")
+except Exception as e:
+    print(f"Couldn't grant to {principal} (only the workspace admin can): {e}")
