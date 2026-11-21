@@ -90,7 +90,7 @@ Counts are from the full raw file. "How to use it" suggests how each flag should
 
 | Flag | Facilities | Meaning | How to use it |
 | --- | ---: | --- | --- |
-| `coords_far_from_city` | 905 | Point is over 50 km from the city's other facilities | Location uncertain: warn before quoting a distance |
+| `coords_far_from_city` | 905 | Point is over 50 km from the city's other facilities | Location uncertain. `01b` checks this properly against India Post: use `coords_check` and `resolved_latitude` / `resolved_longitude` (see `docs/LOCATION_CHECKS.md`) |
 | `name_contains_address` | 414 | Name includes address text | Cosmetic: show `name_short` |
 | `email_obfuscated` | 363 | Email hidden by Cloudflare on the source page | Contact unknown, not missing |
 | `website_not_official` | 325 | Website is a directory or social page | Weaker evidence than the facility's own site |
@@ -140,7 +140,7 @@ Every field is a claim extracted from web text, so coverage says what's present,
 
 - **Runs on a laptop.** Databricks Free Edition blocks most outbound web traffic.
 - **Polite:**
-  - follows each site's `robots.txt`, and skips a site whose `robots.txt` can't be reached
+  - follows each site's `robots.txt`, and skips a site whose `robots.txt` can't be reached (recorded as `robots_unreachable_<error>`; rerun with `--retry-failed` to try those sites again)
   - honours `Crawl-delay` and makes one request at a time per site
   - identifies itself with your contact address
   - fetches at most 4 pages per site, 2 MB each
@@ -157,4 +157,6 @@ python tools/facility_crawler.py export --db crawl.sqlite --out enrichment.csv
 python tools/facility_crawler.py merge  --input facilities_cleaned.csv --enrichment enrichment.csv --out facilities_enriched.csv
 ```
 
-Upload `facilities_enriched.csv` to the `raw` volume and rerun `01_clean_facilities`. It loads the enriched file instead of cleaning the raw data. The crawler has only been tested against simulated websites, so check a sample of its results before relying on them.
+Upload `facilities_enriched.csv` to the `raw` volume, then rerun `01_clean_facilities` (it loads the enriched file instead of cleaning the raw data) and `01b_verify_locations`.
+
+In a 50-site test on real websites, 38 sites returned data. The other 12 were mostly sites whose `robots.txt` forbids crawlers. Check a sample of the results before relying on them.

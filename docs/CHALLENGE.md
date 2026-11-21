@@ -42,8 +42,9 @@ About 10,000 facilities with 51 attributes, mostly **extracted from web text**. 
 | Load the shared data into our schema | Done | `notebooks/00b_load_virtue_foundation` |
 | Clean facilities, with a flag on every doubtful value | Done | `notebooks/01_clean_facilities`, `docs/DATA_CLEANING.md` |
 | Clean the PIN directory and NFHS-5 tables | Ready to run | `notebooks/02_clean_silver` |
-| Resolve a location (city / district / PIN / coordinates) to a point or area | To do | Use `india_post_pincode_directory` for PIN → district → coordinates |
+| Check each facility's location and give it a point to measure from | Done | `notebooks/01b_verify_locations`, `docs/LOCATION_CHECKS.md`: `resolved_latitude` / `resolved_longitude`, `location_confidence`, `location_evidence` |
+| Resolve the user's location (city / district / PIN) to a point or area | To do | Reuse `location_check.Directory`: `find_city()` and the PIN lookups |
 | Match a service to a facility's claims, with the supporting text | To do | Search `specialties`, `capability`, `procedure`, `equipment`, `description` |
-| Score and rank (evidence strength × distance × data quality) | To do | Use `dq_flags` to lower confidence (see the flag table in `docs/DATA_CLEANING.md`) |
+| Score and rank (evidence strength × distance × data quality) | To do | Use `dq_flags` and `location_confidence` to lower confidence (see `docs/DATA_CLEANING.md`, `docs/LOCATION_CHECKS.md`) |
 | Explain each pick: quotes from `description`, `source_urls`, and an uncertainty note | To do | |
 | Non-technical front end | To do | Genie space, Databricks App (`app/`), or both |

@@ -146,3 +146,42 @@ def dq_summary(sdf):
             .groupBy("flag").count()
             .withColumnRenamed("count", "facilities")
             .orderBy(F.col("facilities").desc()))
+
+
+LOCATION_SCHEMA = {
+    "keep": T.BooleanType(), "coords_to_pin_km": T.DoubleType(), "coords_to_city_km": T.DoubleType(),
+    "resolved_latitude": T.DoubleType(), "resolved_longitude": T.DoubleType(),
+    "dq_flag_count": T.LongType(),
+}
+
+
+def location_results_to_spark(spark, results: pd.DataFrame):
+    """location_check.verify() results -> Spark DataFrame with proper types (NaN becomes NULL)."""
+    fields = [T.StructField(c, LOCATION_SCHEMA.get(c, T.StringType()), True) for c in results.columns]
+    rows = []
+    for rec in results.to_dict("records"):
+        row = []
+        for f in fields:
+            v = rec[f.name]
+            if v is None or (isinstance(v, float) and v != v):
+                row.append(None)
+            elif isinstance(f.dataType, T.BooleanType):
+                row.append(bool(v))
+            elif isinstance(f.dataType, T.DoubleType):
+                row.append(float(v))
+            elif isinstance(f.dataType, T.LongType):
+                row.append(int(v))
+            else:
+                row.append(str(v))
+        rows.append(row)
+    return spark.createDataFrame(rows, T.StructType(fields))
+
+
+def add_location_comments(spark, table: str) -> None:
+    from . import location_check
+
+    existing = set(spark.table(table).columns)
+    for col, text in location_check.COLUMN_COMMENTS.items():
+        if col in existing:
+            safe = text.replace("'", "\\'")
+            spark.sql(f"ALTER TABLE {table} ALTER COLUMN `{col}` COMMENT '{safe}'")

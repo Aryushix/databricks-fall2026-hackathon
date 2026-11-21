@@ -9,6 +9,7 @@ Uses the phone / email / domain helpers from src/hackathon/cleaning.py.
 
     python tools/facility_crawler.py crawl  --input facilities_cleaned.csv --db crawl.sqlite \
                                             --contact "you@example.com" --limit 200
+    python tools/facility_crawler.py crawl  ... --retry-failed      # re-crawl only the sites that failed
     python tools/facility_crawler.py export --db crawl.sqlite --out enrichment.csv
     python tools/facility_crawler.py merge  --input facilities_cleaned.csv \
                                             --enrichment enrichment.csv --out facilities_enriched.csv
@@ -20,7 +21,9 @@ What it collects per facility: emails (incl. Cloudflare-obfuscated ones), phones
 established, bed count, social links, schema.org JSON-LD (telephone, email, foundingDate, geo).
 
 Politeness / safety
-  * robots.txt honoured per host (unreachable robots.txt => host skipped), Crawl-delay honoured
+  * robots.txt honoured per host, Crawl-delay honoured. An unreachable robots.txt means the host is
+    skipped and recorded as robots_unreachable_<error> (retry later with --retry-failed); a
+    robots.txt that forbids us is recorded as robots_disallowed
   * one request at a time per host + configurable delay; global concurrency cap
   * identifies itself with a User-Agent that includes your contact address
   * only the facility's own domain is crawled; directory / aggregator / social sites are skipped
@@ -183,6 +186,7 @@ class Crawler:
         self.max_pages = max_pages
         self.use_cache = use_cache
         self.robots, self.robots_lock, self.host_lock, self.host_next = {}, {}, {}, {}
+        self.robots_error = {}
         self.client = httpx.AsyncClient(
             headers={'User-Agent': user_agent, 'Accept': 'text/html,application/xhtml+xml'},
             timeout=timeout, follow_redirects=True, max_redirects=5)
@@ -214,16 +218,25 @@ class Crawler:
 
     async def _load_robots(self, p, host):
         rp = RobotFileParser()
-        try:
-            r = await self.client.get(f'{host}/robots.txt')
-            if r.status_code >= 500:
-                rp.disallow_all = True               # RFC 9309: server error => assume disallow
-            elif r.status_code >= 400:
-                rp.allow_all = True                  # no robots.txt => allowed
-            else:
-                rp.parse(r.text.splitlines())
-        except httpx.HTTPError:
-            rp.disallow_all = True                   # unreachable => don't crawl
+        err = None
+        for attempt in range(3):
+            try:
+                async with self.sem:                     # robots.txt counts against --concurrency too
+                    r = await self.client.get(f'{host}/robots.txt')
+                if r.status_code >= 500:
+                    rp.disallow_all = True               # RFC 9309: server error => assume disallow
+                elif r.status_code >= 400:
+                    rp.allow_all = True                  # no robots.txt => allowed
+                else:
+                    rp.parse(r.text.splitlines())
+                err = None
+                break
+            except httpx.HTTPError as e:
+                err = type(e).__name__
+                await asyncio.sleep(2 ** attempt)
+        if err:
+            rp.disallow_all = True                       # unreachable => don't crawl
+            self.robots_error[host] = err
         self.robots[host] = rp
 
     def _cached(self, url):
@@ -237,7 +250,9 @@ class Crawler:
         if self.use_cache and (c := self._cached(url)):
             return c[0], c[1], c[2], None
         if not await self.allowed(url):
-            return None, None, url, 'robots_disallowed'
+            p = urlparse(url)
+            err = self.robots_error.get(f'{p.scheme}://{p.netloc.lower()}')
+            return None, None, url, f'robots_unreachable_{err}' if err else 'robots_disallowed'
         host = urlparse(url).netloc.lower()
         for attempt in range(3):
             lock = await self._polite(host)
@@ -353,7 +368,9 @@ async def run_crawl(args):
     df = pd.read_csv(args.input, dtype=str, low_memory=False)
     targets = select_targets(df, only_missing=not args.all)
     db = open_db(args.db)
-    done = {r[0] for r in db.execute('SELECT unique_id FROM results')} if not args.refresh else set()
+    done = set() if args.refresh else {
+        uid for uid, st in db.execute('SELECT unique_id, status FROM results')
+        if not (args.retry_failed and st != 'ok')}
     todo = targets[~targets.unique_id.isin(done)]
     if args.limit:
         todo = todo.head(args.limit)
@@ -452,6 +469,7 @@ def main():
     c.add_argument('--timeout', type=float, default=15.0)
     c.add_argument('--all', action='store_true', help='crawl every eligible site, not just gaps')
     c.add_argument('--refresh', action='store_true', help='re-crawl facilities already done')
+    c.add_argument('--retry-failed', action='store_true', help='re-crawl facilities whose crawl failed')
     c.add_argument('--dry-run', action='store_true')
     e = sub.add_parser('export'); e.add_argument('--db', default='crawl.sqlite'); e.add_argument('--out', required=True)
     m = sub.add_parser('merge')

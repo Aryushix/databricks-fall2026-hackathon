@@ -33,6 +33,7 @@
 1. Open `notebooks/00b_load_virtue_foundation`, choose **Serverless** compute, click **Run all**. **Catalog → workspace → hackathon** now has three `bronze_` tables. If the notebook stays on **Waiting**, run `sql/load_data_sql_editor.sql` in the **SQL Editor** instead.
 2. *Recommended:* upload the raw export `dataset.csv` to **Catalog → workspace → hackathon → raw** (never to GitHub). Without it, 30 facilities lose their capability and location fields (see `docs/DATA_CLEANING.md`).
 3. Run `notebooks/01_clean_facilities`. It writes `silver_facilities`, one row per facility with a `dq_flags` column.
+4. Run `notebooks/01b_verify_locations`. It checks every facility's PIN, city and coordinates against India Post and writes `silver_facilities_verified`: **build on this table**.
 
 ---
 
@@ -41,7 +42,7 @@
 ```mermaid
 flowchart LR
   S["Shared catalog<br/>(read-only)"] -->|00b copy| B[("bronze_*<br/>exact copies")]
-  B -->|01 facilities, 02 other tables| SV[("silver_*<br/>cleaned + flagged")]
+  B -->|01 facilities, 01b locations,<br/>02 other tables| SV[("silver_*<br/>cleaned + flagged")]
   SV -->|03 join + aggregate| G[("gold_*<br/>answers")]
   SV -->|04 AI Functions| G
   G --> D["Demo:<br/>Genie space / dashboard / app"]
@@ -52,6 +53,7 @@ flowchart LR
 | Source | 3 tables in **Shares received** | Virtue Foundation | Read-only. We never change it. |
 | Bronze | `bronze_facilities`, `bronze_india_post_pincode_directory`, `bronze_nfhs_5_...` | `00b` | Exact copies, plus `_source_file` and `_ingested_at` |
 | Silver | `silver_facilities` (+ `_dq_summary`) | `01` | Our facility cleaning rules; every doubtful value flagged in `dq_flags` |
+| Silver | `silver_facilities_verified` (+ `_location_removed`) | `01b` | Location checked against India Post; best point to measure from; evidence sentence |
 | Silver | `silver_<table>` for the other two tables | `02` | Fixed types, trimmed text, no duplicates |
 | Gold | `gold_<name>` | `03`, `04` | Joined and summarized tables the demo reads. Every table gets a `COMMENT`. |
 
@@ -70,6 +72,7 @@ The likely join path is **facility → pincode → district → NFHS-5 indicator
 notebooks/
   00b_load_virtue_foundation.py  1. Copy the shared data into workspace.hackathon (run once)
   01_clean_facilities.py         2. Clean the facilities → silver_facilities, with data-quality flags
+  01b_verify_locations.py        2b. Check each location against India Post → silver_facilities_verified
   02_clean_silver.py             3. Clean the PIN directory and NFHS-5 tables → silver_<table>
   03_gold_tables.sql             4. Join and summarize → gold_ tables (write our logic here)
   04_ai_enrich.sql               5. LLM functions on text columns: classify, extract, mask
@@ -79,17 +82,20 @@ src/hackathon/
   config.py                      Every table, volume, and model name in one place
   cleaning.py                    The facility cleaning rules (used by notebook 01 and tools/)
   facility_silver.py             Notebook 01's helpers: pick the source, write typed tables
+  location_check.py              Location checks against India Post (used by notebook 01b and tools/)
   rag.py                         Chatbot logic, shared by notebook 06 and the app
 tools/
   clean_dataset.py               Same cleaning on a laptop: dataset.csv → facilities_cleaned.csv
   facility_crawler.py            Optional, laptop only: fill missing contacts/years from facility websites
-tests/test_cleaning.py           Tests for the cleaning rules (made-up rows, no real data)
+  verify_locations.py            Same location checks on a laptop, on a CSV
+tests/                           Tests for the cleaning and location rules (made-up rows, no real data)
 app/app.py, app.yaml             Optional: demo chat app (Databricks Apps)
 eval/questions.jsonl             Optional: test questions for notebook 06
 data/README.md                   Where the data lives and where it came from (no data in Git)
 sql/load_data_sql_editor.sql     Backup: load the data from the SQL Editor if notebooks won't start
 docs/CHALLENGE.md                The datathon brief and our submission checklist
 docs/DATA_CLEANING.md            Every cleaning rule and data-quality flag, with counts
+docs/LOCATION_CHECKS.md          How each location is checked against India Post, with results
 docs/databricks-tutorial.md      Our Databricks tutorial: cleaning, AI Functions, RAG, evaluation
 .github/                         Automatic code check on every pull request
 ```
@@ -108,6 +114,7 @@ Always attach **Serverless** compute. AI Functions don't work on other compute.
 | --- | --- | --- |
 | `00b_load_virtue_foundation` | Nothing | `bronze_` copies of all three tables |
 | `01_clean_facilities` | Nothing. Put `dataset.csv` in the `raw` volume first for complete data | `silver_facilities`, `silver_facilities_dq_summary` |
+| `01b_verify_locations` | Nothing. To also drop rows whose location fields disagree, add `"conflicting"` to `REMOVE_STATUSES` | `silver_facilities_verified`, `silver_facilities_location_removed` |
 | `02_clean_silver` | `dataset` = `india_post_pincode_directory`, then the NFHS-5 table name; `keys` = its ID column if it has one | `silver_<table>` and a null-count report |
 | `03_gold_tables` | Nothing. Edit the SQL. | Our `gold_` tables |
 | `04_ai_enrich` | Nothing. Replace the example table and column names. | AI-enriched `gold_` table |
@@ -136,7 +143,9 @@ Never commit data, tokens, or API keys.
 
 **...clean the data on my laptop?** `pip install -r tools/requirements.txt`, then `python tools/clean_dataset.py dataset.csv facilities_cleaned.csv`. Keep both files out of Git; `.gitignore` already blocks `*.csv`.
 
-**...run the crawler?** See the Crawler section of `docs/DATA_CLEANING.md`. It runs on a laptop only. Upload its `facilities_enriched.csv` to the `raw` volume, then rerun `01`.
+**...see which locations are wrong?** In `silver_facilities_verified`, filter on `location_status` or on `pin_check` / `city_check` / `coords_check` = `'contradicted'`; `location_evidence` says why. On a laptop: `python tools/verify_locations.py --facilities facilities_cleaned.csv --out facilities_verified.csv --issues location_issues.csv`. See `docs/LOCATION_CHECKS.md`.
+
+**...run the crawler?** See the Crawler section of `docs/DATA_CLEANING.md`. It runs on a laptop only. Upload its `facilities_enriched.csv` to the `raw` volume, then rerun `01` and `01b`.
 
 **...change the schema name (e.g. to test without touching the team's tables)?** Change the `schema` widget at the top of any notebook, or the default in `src/hackathon/config.py`.
 
