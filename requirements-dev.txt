@@ -1,0 +1,5 @@
+# Local development and CI. Notebooks install what they need with %pip.
+-r requirements.txt
+databricks-ai-search
+mlflow[databricks]>=3.1
+ruff

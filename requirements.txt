@@ -1,0 +1,4 @@
+# Installed by Databricks Apps when the demo app deploys (and by you for local runs).
+streamlit>=1.38
+databricks-sdk>=0.169.0
+openai>=1.40

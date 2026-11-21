@@ -1,0 +1,13 @@
+# Databricks Apps configuration. Deploy the app with the repo's Git folder as
+# its source path; Databricks installs requirements.txt and runs this command.
+command: ['streamlit', 'run', 'app/app.py']
+
+env:
+  - name: 'HACKATHON_CATALOG'
+    value: 'workspace'
+  - name: 'HACKATHON_SCHEMA'
+    value: 'hackathon'
+  - name: 'HACKATHON_LLM_ENDPOINT'
+    value: 'databricks-gpt-oss-120b'
+  - name: 'STREAMLIT_GATHER_USAGE_STATS'
+    value: 'false'

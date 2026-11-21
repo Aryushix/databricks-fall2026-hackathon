@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Secrets: never commit tokens or keys. Use Databricks secrets instead.
+.env
+.env.*
+*.pem
+.databrickscfg
+
+# Databricks bundle state
+.databricks/
+
+# Data lives in Unity Catalog volumes, not Git
+data/*
+!data/README.md
+*.csv
+*.parquet
+*.pdf
+*.xlsx
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
