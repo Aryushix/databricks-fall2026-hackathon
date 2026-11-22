@@ -230,18 +230,28 @@ class Navigator:
                for n in self.mapper.needs]
         return sorted(out, key=lambda s: (not s.verifiable, s.name.lower()))
 
-    def find_service(self, req: ServiceRequest) -> ServiceResponse:
+    def find_service(self, req: ServiceRequest, strict: bool = False) -> ServiceResponse:
         """Facilities near a point for one service: verified matches by status tier, confidence band and
         distance, then a "capability not verified, call ahead" list. No symptoms, no triage, no model."""
-        if self.mapper is None or req.service not in self.mapper.needs:
+        if strict and (self.mapper is None or req.service not in self.mapper.needs):
             raise ValueError("unknown service")
+        if self.mapper is not None and req.service in self.mapper.needs:
+            kb = self.mapper.verification_kb(req.service)
+            s_name = self.mapper.name(req.service)
+            proxy_kbs = self.mapper.proxy_kbs(req.service)
+            mapper_ver = self.mapper.version
+        else:
+            kb = None
+            s_name = req.service.replace("_", " ").title()
+            proxy_kbs = []
+            mapper_ver = getattr(self.mapper, "version", None)
+
         rid = uuid.uuid4().hex
-        kb = self.mapper.verification_kb(req.service)
-        need = CareNeed(id=req.service, role="required", verification_kb=kb, proxy_kbs=self.mapper.proxy_kbs(req.service))
-        resp = ServiceResponse(request_id=rid, service=req.service, service_name=self.mapper.name(req.service),
+        need = CareNeed(id=req.service, role="required", verification_kb=kb, proxy_kbs=proxy_kbs)
+        resp = ServiceResponse(request_id=rid, service=req.service, service_name=s_name,
                                verifiable=kb is not None, disclaimer=self.cfg.get("service_disclaimer", ""),
                                versions=Versions(navigation=str(self.cfg.get("navigation_version")),
-                                                 care_needs=self.mapper.version))
+                                                 care_needs=mapper_ver))
         if not in_coverage(req.latitude, req.longitude, self.cfg["coverage"]["bbox"]):
             resp.coverage_note = "This location is outside the area our facility data covers (India)."
             return resp
@@ -250,12 +260,20 @@ class Navigator:
             store = self.store_provider() if self.store_provider else None
             if store is None or self.ranker is None:
                 raise RuntimeError("no data")
-            recs, search, note, versions = self.ranker.rank(store, [need], "routine", req.latitude, req.longitude,
-                                                            req.max_results)
-            resp.recommendations, resp.search = recs, search
-            resp.coverage_note = (note or "").replace(" If this may be an emergency, call 112.", "") or None
-            resp.versions.kb = versions.get("kb")
-            resp.versions.verification_run = versions.get("verification_run")
+            from .matcher import ServiceMatcher
+            matcher = ServiceMatcher()
+            semantic_recs = matcher.match_facilities(store, req.service, req.latitude, req.longitude,
+                                                     radius_km=150.0, max_results=req.max_results)
+            if semantic_recs:
+                resp.recommendations = semantic_recs
+                resp.search = SearchInfo(radius_km=150.0, widened=False)
+            else:
+                recs, search, note, versions = self.ranker.rank(store, [need], "routine", req.latitude, req.longitude,
+                                                                req.max_results)
+                resp.recommendations, resp.search = recs, search
+                resp.coverage_note = (note or "").replace(" If this may be an emergency, call 112.", "") or None
+                resp.versions.kb = versions.get("kb")
+                resp.versions.verification_run = versions.get("verification_run")
         except Exception:
             log.exception("service search failed (request %s)", rid)
             reasons.append("data_unavailable")

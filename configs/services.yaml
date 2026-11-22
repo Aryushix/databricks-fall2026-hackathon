@@ -1,0 +1,123 @@
+# 4-Pillar Requirements Catalog for Healthcare Services
+version: "1.0.0"
+
+services:
+  hemodialysis:
+    name: "Hemodialysis"
+    category: "Renal Care"
+    kb_id: "hemodialysis"
+    requirements:
+      equipment: ["dialysis machine", "hemodialyzer", "ro water plant"]
+      procedures: ["hemodialysis", "haemodialysis", "crrt"]
+      specialties: ["nephrology", "pediatricNephrology"]
+      capabilities: ["dialysis unit", "renal care"]
+
+  cardiac_catheterization:
+    name: "Cardiac Catheterization (Cath Lab / Angioplasty)"
+    category: "Cardiology"
+    kb_id: "cardiac_catheterization"
+    requirements:
+      equipment: ["cath lab", "flat-panel fluoroscopy", "biplane"]
+      procedures: ["coronary angiography", "angioplasty", "ptca", "pci", "stenting"]
+      specialties: ["interventionalCardiology", "cardiology"]
+      capabilities: ["24x7 cath lab", "cardiac icu", "ccu"]
+
+  emergency_department:
+    name: "Emergency department"
+    category: "Emergency & Trauma"
+    kb_id: "emergency_department"
+    requirements:
+      equipment: ["resuscitation bay", "defibrillator", "ventilator"]
+      procedures: ["emergency resuscitation", "triage", "trauma stabilization"]
+      specialties: ["emergencyMedicine", "traumaSurgery"]
+      capabilities: ["24x7 emergency", "casualty ward", "ambulance service"]
+
+  ct_scan:
+    name: "CT scan"
+    category: "Diagnostic Imaging"
+    kb_id: "ct_scan"
+    requirements:
+      equipment: ["ct scanner", "computed tomography", "multislice ct"]
+      procedures: ["ct scan", "contrast ct", "hrct"]
+      specialties: ["radiology", "diagnosticRadiology"]
+      capabilities: ["ct imaging", "24x7 radiology"]
+
+  emergency_c_section_24x7:
+    name: "24x7 emergency C-section"
+    category: "Maternal Health"
+    kb_id: null
+    requirements:
+      equipment: ["operation theatre", "fetal monitor", "anesthesia workstation"]
+      procedures: ["cesarean section", "c-section", "emergency delivery"]
+      specialties: ["gynecologyAndObstetrics", "obstetricsAndGynecology"]
+      capabilities: ["24x7 maternity", "labor room", "obstetric icu"]
+
+  nicu:
+    name: "Newborn intensive care (NICU)"
+    category: "Maternal & Child Health"
+    kb_id: null
+    requirements:
+      equipment: ["infant radiant warmer", "neonatal incubator", "neonatal ventilator", "phototherapy unit"]
+      procedures: ["neonatal resuscitation", "exchange transfusion"]
+      specialties: ["neonatologyPerinatalMedicine", "pediatrics"]
+      capabilities: ["level iii nicu", "neonatal intensive care"]
+
+  mri:
+    name: "MRI"
+    category: "Diagnostic Imaging"
+    kb_id: null
+    requirements:
+      equipment: ["mri scanner", "1.5 tesla mri", "3 tesla mri"]
+      procedures: ["mri scan", "magnetic resonance imaging"]
+      specialties: ["radiology", "diagnosticRadiology"]
+      capabilities: ["mri center", "imaging department"]
+
+  adult_icu_ventilation:
+    name: "Adult ICU with ventilation"
+    category: "Critical Care"
+    kb_id: null
+    requirements:
+      equipment: ["mechanical ventilator", "multipara monitor", "infusion pump"]
+      procedures: ["mechanical ventilation", "invasive monitoring", "intubation"]
+      specialties: ["criticalCareMedicine", "internalMedicine"]
+      capabilities: ["intensive care unit", "icu", "critical care"]
+
+  trauma_care_24x7:
+    name: "24x7 trauma care"
+    category: "Emergency & Trauma"
+    kb_id: null
+    requirements:
+      equipment: ["trauma ot", "ct scanner", "blood bank"]
+      procedures: ["trauma laparotomy", "fracture stabilization", "wound debridement"]
+      specialties: ["orthopedicTraumaAndFractureSurgery", "generalSurgery"]
+      capabilities: ["trauma centre", "emergency trauma"]
+
+  blood_bank:
+    name: "Blood bank"
+    category: "Support Services"
+    kb_id: null
+    requirements:
+      equipment: ["blood storage refrigerator", "centrifuge", "component separator"]
+      procedures: ["blood cross-matching", "blood component separation"]
+      specialties: ["pathology", "transfusionMedicine"]
+      capabilities: ["licensed blood bank", "24x7 blood bank"]
+
+  orthopedics:
+    name: "Orthopedics"
+    category: "Surgical Specialties"
+    kb_id: null
+    requirements:
+      equipment: ["c-arm", "orthopedic surgical set", "traction"]
+      procedures: ["fracture fixation", "joint replacement", "arthroscopy"]
+      specialties: ["orthopedicSurgery", "orthopedics"]
+      capabilities: ["orthopedic department", "trauma ward"]
+
+  ophthalmology:
+    name: "Eye care (ophthalmology)"
+    category: "Surgical Specialties"
+    kb_id: null
+    requirements:
+      equipment: ["slit lamp", "phacoemulsification unit", "operating microscope"]
+      procedures: ["cataract surgery", "phaco", "retinal laser"]
+      specialties: ["ophthalmology", "cataractAndAnteriorSegmentSurgery"]
+      capabilities: ["eye clinic", "ophthalmology department"]

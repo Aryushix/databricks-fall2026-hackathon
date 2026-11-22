@@ -63,7 +63,7 @@ def create_app(navigator: Optional[Navigator] = None,
     @app.post("/find-facilities", response_model=ServiceResponse)
     def find_facilities(req: ServiceRequest) -> ServiceResponse:
         try:
-            return nav().find_service(req)
+            return nav().find_service(req, strict=True)
         except ValueError:
             raise HTTPException(status_code=422, detail="unknown service: see GET /services")
 

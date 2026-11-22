@@ -1,0 +1,275 @@
+{
+  "kidney dialysis": {
+    "service_name": "Kidney Dialysis (Hemodialysis / Renal Replacement)",
+    "clinical_synonyms": [
+      "hemodialysis",
+      "haemodialysis",
+      "renal replacement therapy",
+      "dialysis",
+      "artificial kidney",
+      "kidney filtration"
+    ],
+    "procedures": [
+      "hemodialysis",
+      "intermittent hemodialysis",
+      "continuous renal replacement therapy (CRRT)",
+      "arteriovenous fistula cannulation",
+      "peritoneal dialysis"
+    ],
+    "equipment": [
+      "hemodialysis machine",
+      "dialyzer",
+      "reverse osmosis (RO) water purification plant",
+      "dialysate concentrate delivery system",
+      "heparin infusion pump"
+    ],
+    "specialties": [
+      "nephrology",
+      "renal medicine",
+      "pediatric nephrology",
+      "urology"
+    ],
+    "capabilities": [
+      "dialysis unit",
+      "24x7 emergency dialysis",
+      "acute renal failure management",
+      "chronic kidney disease (CKD) clinic"
+    ],
+    "is_cached": true
+  },
+  "kidney filtration": {
+    "service_name": "Kidney Filtration",
+    "clinical_synonyms": [
+      "hemodialysis",
+      "renal replacement therapy",
+      "hemofiltration",
+      "dialysis"
+    ],
+    "procedures": [
+      "hemodialysis",
+      "continuous venovenous hemofiltration (CVVH)",
+      "ultrafiltration"
+    ],
+    "equipment": [
+      "dialyzer",
+      "hemodialysis machine",
+      "hemofilter"
+    ],
+    "specialties": [
+      "nephrology",
+      "renal medicine"
+    ],
+    "capabilities": [
+      "dialysis unit",
+      "intensive care renal unit"
+    ],
+    "is_cached": true
+  },
+  "heart bypass": {
+    "service_name": "Heart Bypass Surgery (CABG)",
+    "clinical_synonyms": [
+      "coronary artery bypass graft",
+      "CABG",
+      "open heart surgery",
+      "bypass surgery",
+      "myocardial revascularization"
+    ],
+    "procedures": [
+      "coronary artery bypass grafting (CABG)",
+      "off-pump CABG",
+      "minimally invasive direct coronary artery bypass (MIDCAB)",
+      "coronary angiography"
+    ],
+    "equipment": [
+      "heart-lung cardiopulmonary bypass machine",
+      "intra-aortic balloon pump (IABP)",
+      "sternal saw",
+      "cardiac catheterization fluoroscopy lab"
+    ],
+    "specialties": [
+      "cardiothoracic surgery",
+      "cardiology",
+      "cardiovascular and thoracic surgery (CTVS)",
+      "interventional cardiology"
+    ],
+    "capabilities": [
+      "cardiac surgery operating theater",
+      "coronary care unit (CCU)",
+      "cardiac intensive care unit (CICU)"
+    ],
+    "is_cached": true
+  },
+  "cancer chemo": {
+    "service_name": "Cancer Chemotherapy",
+    "clinical_synonyms": [
+      "chemotherapy",
+      "medical oncology",
+      "antineoplastic therapy",
+      "infusion therapy",
+      "cancer treatment"
+    ],
+    "procedures": [
+      "intravenous chemotherapy administration",
+      "chemotherapy infusion port maintenance",
+      "targeted biological therapy",
+      "immunotherapy"
+    ],
+    "equipment": [
+      "cytotoxic laminar flow biosafety cabinet",
+      "infusion volumetric pumps",
+      "chemotherapy compounding suite",
+      "chemo ports"
+    ],
+    "specialties": [
+      "medical oncology",
+      "oncology",
+      "hematology oncology",
+      "radiation oncology"
+    ],
+    "capabilities": [
+      "daycare chemotherapy unit",
+      "oncology ward",
+      "neutropenic isolation facility",
+      "comprehensive cancer care center"
+    ],
+    "is_cached": true
+  },
+  "cataract eye surgery": {
+    "service_name": "Cataract Surgery",
+    "clinical_synonyms": [
+      "phacoemulsification",
+      "cataract extraction",
+      "intraocular lens (IOL) implantation",
+      "lens replacement",
+      "cataract removal"
+    ],
+    "procedures": [
+      "phacoemulsification with posterior chamber IOL",
+      "micro-incision cataract surgery (MICS)",
+      "extracapsular cataract extraction"
+    ],
+    "equipment": [
+      "phacoemulsification machine",
+      "ophthalmic operating microscope",
+      "optical biometer / A-scan",
+      "keratometer"
+    ],
+    "specialties": [
+      "ophthalmology",
+      "cataract and refractive surgery",
+      "eye care"
+    ],
+    "capabilities": [
+      "ophthalmic modular operation theater",
+      "daycare eye surgery center",
+      "post-operative eye recovery room"
+    ],
+    "is_cached": true
+  },
+  "broken bone emergency": {
+    "service_name": "Broken Bone & Fracture Emergency",
+    "clinical_synonyms": [
+      "fracture management",
+      "orthopedic trauma",
+      "bone fracture reduction",
+      "orthopedic emergency"
+    ],
+    "procedures": [
+      "closed reduction and casting",
+      "open reduction and internal fixation (ORIF)",
+      "external skeletal fixation",
+      "traction application"
+    ],
+    "equipment": [
+      "c-arm digital fluoroscopy unit",
+      "radiography x-ray machine",
+      "plaster of paris (POP) application table",
+      "orthopedic fracture reduction table"
+    ],
+    "specialties": [
+      "orthopedics",
+      "orthopedic surgery",
+      "trauma surgery",
+      "emergency medicine"
+    ],
+    "capabilities": [
+      "orthopedic trauma emergency unit",
+      "24x7 fracture plaster room",
+      "orthopedic operating theater",
+      "trauma ICU"
+    ],
+    "is_cached": true
+  },
+  "hemodialysis": {
+    "service_name": "Hemodialysis",
+    "clinical_synonyms": [
+      "hemodialysis",
+      "Hemodialysis",
+      "renal replacement",
+      "dialysis",
+      "hemofiltration"
+    ],
+    "procedures": [
+      "hemodialysis",
+      "crrt",
+      "renal dialysis"
+    ],
+    "equipment": [
+      "hemodialysis",
+      "dialyzer",
+      "dialysis machine",
+      "ro water plant"
+    ],
+    "specialties": [
+      "nephrology",
+      "renal care",
+      "urology"
+    ],
+    "capabilities": [
+      "hemodialysis",
+      "dialysis unit",
+      "renal care unit"
+    ],
+    "is_cached": false
+  },
+  "ct_scan": {
+    "service_name": "Ct Scan",
+    "clinical_synonyms": [
+      "ct_scan",
+      "Ct Scan"
+    ],
+    "procedures": [
+      "ct_scan"
+    ],
+    "equipment": [
+      "ct_scan"
+    ],
+    "specialties": [
+      "ct_scan"
+    ],
+    "capabilities": [
+      "ct_scan"
+    ],
+    "is_cached": false
+  },
+  "nicu": {
+    "service_name": "Nicu",
+    "clinical_synonyms": [
+      "nicu",
+      "Nicu"
+    ],
+    "procedures": [
+      "nicu"
+    ],
+    "equipment": [
+      "nicu"
+    ],
+    "specialties": [
+      "nicu"
+    ],
+    "capabilities": [
+      "nicu"
+    ],
+    "is_cached": false
+  }
+}

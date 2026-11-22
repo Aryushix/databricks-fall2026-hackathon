@@ -54,20 +54,20 @@ class CareNeedTable:
 
     # ------------------------------------------------------------------ lookups
     def name(self, nid: str) -> str:
-        return self.needs[nid].get("name", nid)
+        return self.needs.get(nid, {}).get("name", nid)
 
     def verification_kb(self, nid: str) -> Optional[str]:
-        kb = self.needs[nid].get("kb")
+        kb = self.needs.get(nid, {}).get("kb")
         return kb if kb in self.kb_ids else None
 
     def proxy_kbs(self, nid: str) -> list[str]:
-        return [k for k in self.needs[nid].get("proxy_kbs", []) if k in self.kb_ids]
+        return [k for k in self.needs.get(nid, {}).get("proxy_kbs", []) if k in self.kb_ids]
 
     def signals(self, nid: str) -> dict:
-        return self.needs[nid].get("signals", {})
+        return self.needs.get(nid, {}).get("signals", {})
 
     def fallback_types(self, nid: str) -> list[str]:
-        return self.needs[nid].get("fallback_types", ["hospital"])
+        return self.needs.get(nid, {}).get("fallback_types", ["hospital"])
 
     # ------------------------------------------------------------------ mapping
     def _finding_needs(self, a: Optional[SymptomAnalysis]) -> list[tuple[str, str]]:

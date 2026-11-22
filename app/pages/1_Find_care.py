@@ -74,11 +74,14 @@ st.caption("For community health workers and NGO coordinators. Results show what
 
 services = navigator().services()
 labels = {f"{s.name}{' ✓ verifiable' if s.verifiable else ''}": s for s in services}
+service_options = ["(Choose from list or type custom service below)"] + list(labels)
 
 with st.form("find"):
-    choice = st.selectbox("Service", list(labels),
-                          help="✓ verifiable: we checked facilities' own websites and listings for this service. "
-                               "For the others we can only list nearby facilities to call.")
+    choice = st.selectbox("Common service", service_options,
+                          help="Pick a common service from the list, or type any custom service in the field below.")
+    custom_service = st.text_input("Or type ANY healthcare service",
+                                   placeholder="e.g. Chemotherapy, NICU, Pediatric Heart Surgery, Knee Replacement, Burn Care...",
+                                   max_chars=100)
     c1, c2 = st.columns([3, 2])
     place = c1.text_input("Where? Town, city, district or 6-digit PIN code", placeholder="e.g. Gaya, or 823001",
                           max_chars=200)
@@ -91,12 +94,19 @@ with st.form("find"):
     submitted = st.form_submit_button("Find facilities")
 
 if submitted:
-    service = labels[choice]
+    if custom_service.strip():
+        target_service = custom_service.strip()
+    elif choice in labels:
+        target_service = labels[choice].id
+    else:
+        st.warning("Please choose a service from the list or type a custom service.")
+        st.stop()
+
     point, told = where(place, state, lat, lon)
     if point is None:
         st.warning(told)
     else:
-        resp = navigator().find_service(ServiceRequest(service=service.id, latitude=point[0], longitude=point[1],
+        resp = navigator().find_service(ServiceRequest(service=target_service, latitude=point[0], longitude=point[1],
                                                        max_results=k))
         st.info(told)
         verified = [r for r in resp.recommendations if r.list == "verified"]
