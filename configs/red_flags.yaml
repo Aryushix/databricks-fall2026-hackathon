@@ -1,0 +1,252 @@
+# Red-flag screen for symptom navigation (src/hackathon/navigation/red_flags.py).
+#
+# DRAFT. Not clinically validated. Before anyone relies on it:
+#   * a clinician reviews every rule, floor and category;
+#   * a Hindi speaker reviews the romanized-Hindi/Hinglish and Devanagari patterns.
+#
+# The screen runs on the raw message before any model call. A rule fires when every pattern group
+# in it matches somewhere in the message without a negation in scope. When unsure, rules are written
+# to fire: over-triage is reported, missed emergencies fail CI (tests/test_navigation_red_flags.py).
+#
+# Patterns are Python regexes, matched case-insensitively on the message after Unicode NFKC
+# normalisation, lower-casing and whitespace collapsing. <<NAME>> inserts a fragment from `defs`.
+# Devanagari has no \b word boundaries in Python's re, so Devanagari alternatives go without them.
+# An all_of group can be {negatable: false, patterns: [...]}: context words (baby, pregnant) are never
+# negated, only symptoms are ("bachcha doodh nahi pi raha" must still fire).
+
+rules_version: "0.1.0"
+review_status: draft
+
+defs:
+  PAIN: '(?:\b(?:pain\w*|pian|pane|paine|ache|aches|aching|hurt\w*|hurd|sore|dard|dardh|dhard|dukh\w*|dukhn\w*)\b|दर्द)'
+  CHEST: '(?:\b(?:chest|chset|chets|cheast|chesst|chst|cheest|seena|seene|sina|sine|seeney|chhati|chati|chhaati|chaati)\b|सीने|सीना|छाती)'
+  PRESSURE: '(?:\b(?:pressure|presure|pressur|tight\w*|heav\w*|squeez\w*|crush\w*|jakad\w*|jakd\w*|bhari\w*|bharipan|dabav|dabaav|dabao)\b|दबाव|जकड़\w*|भारी)'
+  ARMJAW: '(?:\b(?:arm|arms|shoulder|jaw|jaws|baju|baah|baahon|haath|jabda|jabde|jabdey|jabdo)\b|बांह|बाजू|हाथ|जबड़\w*)'
+  SPREAD: '(?:\b(?:spread\w*|radiat\w*|going\s+(?:to|down|into|up)|goes\s+(?:to|down|into|up)|moving\s+(?:to|into)|travel\w*\s+(?:to|down)|ja\s+raha|ja\s+rha|ja\s+rahi|failta|fail\s+raha|phail\w*|fail\w*)\b|फैल\w*)'
+  SWEAT: '(?:\b(?:sweat\w*|swet\w*|pasina|paseena|pseena|pasine)\b|पसीना|पसीने)'
+  ABDO: '(?:\b(?:stomach|stomache|stomac|stomak|belly|abdomen|abdominal|abdomin\w*|tummy|tummie|gut|navel|pet|pait|peyt)\b|पेट)'
+  SEVERE: '(?:\b(?:severe|sever|servere|severely|bad|very\s+bad|really\s+bad|terrible|terible|horrible|unbearable|unbarable|unbearible|excruciating|intense|extreme|worst|killing|sharp|tez|tej|bahut|bohot|bahot|bhot|bohat|zyada|jyada|asahniya)\b|बहुत|तेज़|तेज|असहनीय)'
+  BREATHVERB: '(?:\b(?:breath\w*|breth\w*|braeth\w*)\b)'
+  SAANS: '(?:\b(?:saans|sans|saas|saanss|swas|swaas|shwas|shwaas)\b|सांस|साँस|श्वास)'
+  CHILD: '(?:\b(?:baby|babies|bby|babby|infant|newborn|new\s*born|neonate|toddler|child|kid|bachcha|bachchi|bacha|bachi|bachche|bachhe|baccha|bacchi|shishu|munna|munni|nanha)\b|\b\d+\s*(?:day|days|week|weeks|month|months|mahine|mahina|din)\s*(?:old|ka|ki|ke)\b|बच्च\w*|शिशु|नवजात)'
+  NEWBORN: '(?:\b(?:baby|infant|newborn|new\s*born|neonate|shishu)\b|\b\d+\s*(?:day|days|week|weeks|din)\s*(?:old|ka|ki|ke)\b|शिशु|नवजात)'
+  PREG: '(?:\b(?:pregnan\w*|pregnent|pregant|pragnant|pragnent|preganant|preggo|expecting\s+a\s+baby|garbh\w*|garbhvati|garbhwati|pet\s+se\s+(?:hoon|hu|hai|hain|thi|hun))\b|गर्भ\w*|प्रेग्नेंट)'
+
+negation:
+  # A cue in the same clause just before a match (English, Hinglish) or just after it (Hindi word
+  # order: "dard nahi hai") suppresses that match. Self-harm rules are never negatable.
+  before: '\b(?:no|not|never|denies|denied|without|nahi|nahin|nai|nhi|bina)\b|\b(?:don''?t|dont|do\s+not|doesn''?t|does\s+not|didn''?t|did\s+not|haven''?t|have\s+not|hasn''?t|has\s+not)\s+(?:have|has|had|feel|feeling|get|got|notice\w*)\b|नहीं|नही|बिना'
+  after: '^\W*(?:\S+\s+){0,2}?(?:nahi|nahin|nai|nhi)\b|^\s*(?:\S+\s*){0,2}?(?:नहीं|नही)'
+  # Words right after a "before" cue that mean it isn't negating the symptom ("not just", "no relief").
+  cancel_after_cue: '^\W*(?:just|only|sure|relief|better|improv\w*|change|stopping|stop|going\s+away|one|idea|longer|able)\b'
+  # Clause boundaries: a cue on the other side of one of these doesn't apply.
+  boundaries: '[.;:!?\n,]|\b(?:but|however|though|although|except|lekin|magar|par|aur|and|phir|then|now|abhi|ab)\b|लेकिन|मगर|पर|और|अब'
+  before_window_chars: 40
+  after_window_chars: 25
+
+rules:
+  # ---------------------------------------------------------------- possible heart attack
+  - id: CARDIAC_CHEST_PAIN
+    category: possible_heart_attack
+    floor: emergency
+    patterns:
+      - '<<CHEST>>\s*(?:\S+\s+){0,3}?<<PAIN>>'
+      - '<<PAIN>>\s+(?:in|on|at|across)\s+(?:my\s+|the\s+|his\s+|her\s+)?(?:\S+\s+)?<<CHEST>>'
+      - '<<CHEST>>\s*(?:\S+\s+){0,3}?<<PRESSURE>>'
+      - '<<PRESSURE>>\s+(?:in|on|across)\s+(?:my\s+|the\s+|his\s+|her\s+)?<<CHEST>>'
+      - '\b(?:heart|hart|haert|heat)\s*-?\s*attack\b|\bheartattack\b|\bdil\s+ka\s+daura\b|दिल\s*का\s*दौरा|हार्ट\s*अटैक'
+      - '\bdil\s+(?:mein|me|main|mai)\s+(?:\S+\s+){0,2}?(?:dard|dukh\w*)\b|दिल\s*में\s*दर्द'
+      - '<<PAIN>>\s*(?:\S+\s+){0,6}?<<SPREAD>>\s*(?:\S+\s+){0,3}?<<ARMJAW>>'
+      - '<<CHEST>>\s*(?:\S+\s+){0,4}?<<SPREAD>>\s*(?:\S+\s+){0,3}?<<ARMJAW>>'
+  - id: CARDIAC_ARM_JAW_WITH_SWEAT_OR_BREATH
+    category: possible_heart_attack
+    floor: emergency
+    all_of:
+      - ['<<ARMJAW>>\s*(?:\S+\s+){0,3}?<<PAIN>>', '<<PAIN>>\s+(?:in|on)\s+(?:my\s+|the\s+)?(?:left\s+)?<<ARMJAW>>']
+      - ['<<SWEAT>>', '\b(?:breathless\w*|short\s+of\s+breath|out\s+of\s+breath)\b', '<<SAANS>>\s*(?:\S+\s+){0,2}?(?:phool|fool|ruk)\w*']
+
+  # ---------------------------------------------------------------- possible stroke
+  - id: STROKE_SIGNS
+    category: possible_stroke
+    floor: emergency
+    patterns:
+      - '\bface\s+(?:\S+\s+){0,3}?(?:droop\w*|drop\w*|sag\w*|crooked|twist\w*|tilt\w*|uneven|lopsided|numb\w*|fallen)'
+      - '\b(?:droop\w*|drooping|crooked|lopsided)\s+(?:\S+\s+){0,2}?(?:face|smile|mouth)'
+      - '\b(?:muh|munh|mooh|muhn)\s+(?:\S+\s+){0,2}?(?:tedha|tedhaa|terha|tera|tedi|tedhi|latak\w*)'
+      - '(?:मुंह|मुँह)\s*(?:\S+\s*){0,2}?(?:टेढ़ा|टेढा|लटक\w*)'
+      - '\b(?:one|1|left|right|ek)\s*(?:-|\s)?(?:side|taraf)\s+(?:of\s+(?:my|the|his|her)\s+(?:body|face)\s+)?(?:\S+\s+){0,3}?(?:weak\w*|numb\w*|paraly\w*|heavy|dead|not\s+mov\w*|can''?t\s+mov\w*|kamzor\w*|sunn)'
+      - '\b(?:weak\w*|numb\w*|paraly\w*)\s+(?:on|in)\s+(?:one|the\s+(?:left|right)|my\s+(?:left|right))\s+(?:side|arm|leg)'
+      - '\bsudden\w*\s+(?:\S+\s+){0,2}?(?:weak\w*|numb\w*|can''?t\s+(?:move|lift|feel))\b'
+      - '\b(?:paralys\w*|paralyz\w*|paralis\w*|lakwa|lakva|laqwa|lakhwa|falij|falaj)\b|लकवा|फालिज'
+      - '\bslur\w*\s+(?:\S+\s+){0,2}?(?:speech|talk\w*|words?)|\bspeech\s+(?:\S+\s+){0,2}?(?:slur\w*|unclear|garbled|weird)'
+      - '\b(?:can''?t|cannot|cant|unable\s+to|not\s+able\s+to)\s+(?:speak|talk)\b|\b(?:zuban|zubaan|jubaan|juban|zaban)\s+(?:\S+\s+){0,2}?(?:ladkhad|lad\s*khad|atak|ruk|lad)\w*|\bbol\s+nahi\s+(?:pa|paa)\s*(?:raha|rahi|rhe|rha|rhi)\b|बोल\s*नहीं\s*पा|(?:ज़ुबान|जुबान)\s*लड़खड़ा'
+      - '\b(?:sudden\w*|achanak)\s+(?:\S+\s+){0,3}?(?:confus\w*|disorient\w*|can''?t\s+understand|not\s+making\s+sense)'
+      - '\b(?:worst|wrost|worse)\s+headache\s+(?:of\s+(?:my|his|her)\s+life|ever)\b|\bthunderclap\s+headache\b'
+      - '\b(?:sudden\w*|achanak)\s+(?:\S+\s+){0,3}?(?:severe|terrible|explosive|very\s+bad|bahut\s+tez|bahut)\s+(?:headache|head\s*ache|sir\s*dard|sar\s*dard|sirdard)'
+      - '(?<!heat\s)(?<!sun\s)\b(?:brain\s*)?stroke\b|ब्रेन\s*स्ट्रोक'
+
+  # ---------------------------------------------------------------- breathing difficulty
+  - id: BREATHING_DIFFICULTY
+    category: breathing_difficulty
+    floor: emergency
+    patterns:
+      - '\b(?:can''?t|cannot|cant|can\s+not|unable\s+to|not\s+able\s+to|couldn''?t|hard\s+to|struggl\w*\s+to|difficult\s+to)\s+(?:\S+\s+)?<<BREATHVERB>>'
+      - '\b(?:difficulty|difficult|trouble|problem|struggl\w*|hard\s+time)\s+(?:in\s+)?<<BREATHVERB>>'
+      - '<<BREATHVERB>>\s+(?:\S+\s+){0,2}?(?:difficult\w*|hard|trouble|problem|fast\s+and\s+shallow|very\s+fast)'
+      - '\b(?:short(?:ness)?\s+of\s+breath|breathless\w*|out\s+of\s+breath|gasp\w*|suffocat\w*)\b'
+      - '\bchok\w*\b'
+      - '\blips?\s+(?:\S+\s+){0,2}?(?:blue|bluish|purple)|\bblue\s+lips\b|\b(?:hoth|honth)\s+(?:\S+\s+){0,2}?(?:neele|neela|nile)\b|होंठ\s*नीले'
+      - '<<SAANS>>\s*(?:\S+\s+){0,3}?(?:nahi|nahin|nai|nhi)\s+(?:aa|a|le|ho|aay)\w*'
+      - '<<SAANS>>\s*(?:\S+\s+){0,3}?(?:taklif|takleef|taqleef|dikkat|dikat|mushkil|problem|tight\w*|phool|fool|ruk|atak|ghut|chadh|chad)\w*'
+      - '\bdam\s+ghut\w*|दम\s*घुट'
+      - '(?:सांस|साँस)\s*(?:\S+\s*){0,3}?(?:नहीं|नही|तकलीफ|दिक्कत|फूल|रुक|अटक|घुट)'
+
+  # ---------------------------------------------------------------- major trauma or bleeding
+  - id: TRAUMA_MAJOR
+    category: major_trauma_bleeding
+    floor: emergency
+    patterns:
+      - '\b(?:road\s+|bike\s+|car\s+|bus\s+|truck\s+)?(?:accident|accidant|acident|accidnet|axident|accedent|accsident)\b|एक्सीडेंट|दुर्घटना'
+      - '\b(?:hit|knocked\s+down|run\s+over|ran\s+over)\s+by\s+(?:a\s+)?(?:car|bus|truck|lorry|bike|motorcycle|scooter|vehicle|auto|train|tractor)\b'
+      - '\b(?:car|bike|bus|truck|scooter|auto)\s+(?:crash\w*|collision|ne\s+(?:maar|takkar|thok)\w*)|\btakkar\s+(?:ho|maar|lag)\w*|टक्कर'
+      - '\b(?:fell|fallen|fall|falling|slipped)\s+(?:\S+\s+){0,3}?(?:from|off)\s+(?:\S+\s+){0,2}?(?:height|roof|terrace|building|stairs|staircase|ladder|tree|balcony|floor|scaffold\w*)'
+      - '\b(?:chhat|chat|chhath|seedhi|sidhi|seedi|ped|pedh|building|balcony|chhajja)\s+se\s+(?:\S+\s+)?gir\w*|छत\s*से\s*गिर|सीढ़ी\s*से\s*गिर|पेड़\s*से\s*गिर'
+      - '\b(?:bleed\w*|bleding|blood)\s+(?:\S+\s+){0,3}?(?:won''?t|wont|will\s+not|doesn''?t|does\s+not|isn''?t|is\s+not|not|can''?t|cannot)\s+(?:\S+\s+)?stop\w*'
+      - '\b(?:lots\s+of|a\s+lot\s+of|heavy|heavily|severe|profuse\w*|gushing|spurting|so\s+much|too\s+much|non[- ]?stop|massive)\s+(?:\S+\s+)?(?:bleed\w*|blood)'
+      - '\b(?:khoon|khun|khoon)\s+(?:\S+\s+){0,3}?(?:ruk\s+nahi|nahi\s+ruk|band\s+nahi|nahi\s+band|bahut|zyada|jyada)\w*|\bbahut\s+(?:\S+\s+)?(?:khoon|khun)\b'
+      - 'खून\s*(?:\S+\s*){0,2}?(?:नहीं\s*रुक|रुक\s*नहीं|बहुत)|बहुत\s*खून'
+      - '\bhead\s+injur\w*|\b(?:hit|banged|struck|smashed)\s+(?:my|his|her|the)\s+head\b|\bsir\s+(?:pe|par|mein|me)\s+chot\b|सिर\s*(?:पर|में)\s*चोट'
+      - '\b(?:stab\w*|gun\s*shot|gunshot|shot\s+(?:in|with))\b|\bchaku\s+(?:laga|maar\w*)|\bgoli\s+lag\w*'
+      - '\b(?:deep|big|large|bad)\s+(?:cut|wound|gash)\b'
+      - '\b(?:broken|fractured)\s+(?:bone|leg|arm|neck|back|hip|skull)\b|\bhaddi\s+(?:tut|toot)\w*|हड्डी\s*टूट'
+
+  # ---------------------------------------------------------------- burns
+  - id: BURN_ELECTRIC_OR_CHEMICAL
+    category: burns
+    floor: emergency
+    patterns:
+      - '\b(?:electric\w*\s+(?:shock|burn\w*|current)|electrocut\w*|current\s+(?:laga|lag\s+gaya|lagaa|lag\s+gya|lag\s+gayi|lag\s+gyi)|bijli\s+(?:ka\s+)?(?:jhatka|current|ka\s+jhatka)|shock\s+laga)\b|करंट\s*लग'
+      - '\b(?:acid|tezaab|tezab|tejab|tejaab|chemical)\s+(?:\S+\s+){0,3}?(?:burn\w*|attack\w*|fell|spill\w*|thrown|splash\w*|gir\w*|pad\w*|lag\w*|jal\w*)|\bacid\s+attack\b|तेज़ाब|तेजाब'
+  - id: BURN_LARGE_OR_FACIAL
+    category: burns
+    floor: emergency
+    all_of:
+      - ['\bburn(?:s|t|ed)?\b', '\bjal\s+(?:gaya|gayi|gaye|gya|gyi)\b', '\bjhulas\w*', '\baag\s+(?:se|me|mein|mai)\s+(?:\S+\s+)?jal\w*', '\bscald\w*', 'जल\s*गय\w*', 'झुलस\w*']
+      - ['\b(?:face|chehra|chehre|large|big|huge|whole|entire|all\s+over|body|chest|back|badly|severe\w*|serious\w*|fire|aag|blister\w*|peel\w*|bahut|pura|poora|child|baby|bachch\w*|bacha|bachi|kid|toddler|infant)\b', 'चेहरा|आग|पूरा|बच्च\w*']
+  - id: BURN_ANY
+    category: burns
+    floor: urgent
+    patterns:
+      - '\bburn(?:s|t|ed)?\b|\bjal\s+(?:gaya|gayi|gaye|gya|gyi)\b|\bjhulas\w*|\bscald\w*|जल\s*गय\w*|झुलस\w*'
+
+  # ---------------------------------------------------------------- pregnancy emergency
+  - id: PREGNANCY_DANGER_SIGNS
+    category: pregnancy_emergency
+    floor: emergency
+    all_of:
+      - {negatable: false, patterns: ['<<PREG>>']}
+      - ['\b(?:bleed\w*|bleding|blood|spotting|khoon|khun)\b', '<<SEVERE>>\s+(?:\S+\s+){0,2}?(?:<<PAIN>>|cramp\w*)', '<<PAIN>>\s+(?:\S+\s+){0,2}?<<SEVERE>>',
+         '\b(?:fit|fits|seizure\w*|convuls\w*|jhatk\w*|daura|faint\w*|fainted|unconscious|behosh|passed\s+out)\b',
+         '\bwater\s+(?:broke|has\s+broken|break\w*)\b|\bpaani\s+(?:nikal|gir|toot)\w*',
+         '\bbaby\s+(?:is\s+)?(?:not\s+moving|stopped\s+moving|isn''?t\s+moving|not\s+kicking)|\b(?:bacha|baccha|bachcha)\s+(?:\S+\s+)?(?:hil|hal)\w*\s+nahi',
+         '\bsevere\s+headache\b|\bblurr?\w*\s+vision\b|\bswell\w*\s+(?:\S+\s+)?(?:face|hands)\b',
+         'खून|बहुत\s*दर्द|तेज़\s*दर्द|तेज\s*दर्द|दौरा|बेहोश']
+
+  # ---------------------------------------------------------------- newborn or child emergency
+  - id: CHILD_DANGER_SIGNS
+    category: newborn_child_emergency
+    floor: emergency
+    all_of:
+      - {negatable: false, patterns: ['<<CHILD>>', '\b(?:son|daughter|beta|beti)\b']}
+      - ['\bnot\s+(?:feeding|eating|drinking|sucking|taking\s+(?:milk|feed\w*|the\s+breast))\b', '\b(?:won''?t|wont|isn''?t|doesn''?t)\s+(?:feed|eat|drink|suck)\w*', '\brefus\w*\s+(?:to\s+)?(?:feed|milk|breast\w*|eat|drink)',
+         '\bdoodh\s+(?:\S+\s+)?(?:nahi|nahin|nhi)\s+(?:pi|pee|le|pe)\w*', '\b(?:nahi|nahin|nhi)\s+(?:pi|pee)\s+(?:raha|rahi|rha|rhi)\b',
+         '\b(?:floppy|limp)\b', '\b(?:very|too|unusually|really)\s+(?:sleepy|drowsy)\b', '\b(?:won''?t|wont|not)\s+wak\w*', '\bhard\s+to\s+wake\b',
+         '\b(?:fast|rapid|quick|heavy)\s+breath\w*', '<<BREATHVERB>>\s+(?:\S+\s+)?(?:very\s+)?(?:fast|rapid|quickly)', '\bgrunting\b', '\bchest\s+(?:\S+\s+)?(?:pulling|sucking|caving)\s+in\b',
+         '\b(?:convuls\w*|seizure\w*|siezure\w*|fit|fits|jhatk\w*|jhatke|daura)\b', '\bturn\w*\s+(?:\S+\s+)?blue\b|\bblue\s+lips\b|\bneela\s+pad\w*',
+         '\b(?:unconscious|behosh|not\s+responding|unresponsive)\b',
+         'दूध\s*नहीं|बेहोश|दौरा|झटके']
+  - id: NEWBORN_FEVER
+    category: newborn_child_emergency
+    floor: emergency
+    all_of:
+      - {negatable: false, patterns: ['<<NEWBORN>>']}
+      - ['\b(?:fever|feverish|bukhar|bukhaar|temperature|temp)\b', 'बुखार']
+
+  # ---------------------------------------------------------------- unconscious or seizure
+  - id: UNCONSCIOUS_OR_SEIZURE
+    category: unconscious_seizure
+    floor: emergency
+    patterns:
+      - '\b(?:unconscious|unconcious|unconsious|uncounscious|unconscius|unresponsive)\b|\bun\s?c[a-z]{3,8}ous\b'
+      - '\bnot\s+(?:waking\s+up|responding|responsive|conscious|breathing)\b|\b(?:won''?t|wont)\s+wake\s+up\b|\bcan''?t\s+wake\s+(?:him|her|them|up)\b'
+      - '\b(?:passed\s+out|collapsed|fainted|fainting|faint\s+ho|blacked\s+out|fell\s+unconscious)\b'
+      - '\b(?:behosh|behos|bahosh|be\s+hosh)\b|\bhosh\s+(?:\S+\s+)?(?:nahi|nahin|nhi|kho)\w*|बेहोश|होश\s*नहीं'
+      - '\b(?:seizure\w*|siezure\w*|seziure\w*|sezure\w*|convuls\w*|mirgi|mirgee|epileptic\s+(?:fit|attack))\b|मिर्गी'
+      - '\b(?:having|had|getting|got|has|have)\s+(?:a\s+)?fits?\b|\bfits?\s+(?:aa|aaye|aaya|aye|pad|padi|pade|aa\s+rahe)\w*|\bjhatke\s+(?:aa|aaye|aa\s+rahe|lag)\w*|\bdaura\s+(?:pada|padna|aaya|aa\s+gaya|padta)\b|दौरा\s*पड़|झटके'
+
+  # ---------------------------------------------------------------- poisoning, overdose, bites
+  - id: POISONING_OVERDOSE
+    category: poisoning_overdose_bites
+    floor: emergency
+    patterns:
+      - '\b(?:swallow\w*|drank|drunk|drinking|took|taken|ate|eaten|consumed|kha\s+(?:liya|li|lia|gaya|gayi|gya|gyi)|pi\s+(?:liya|li|lia|gaya|gayi|gya|gyi))\s+(?:\S+\s+){0,3}?(?:poison\w*|pesticide\w*|insecticide\w*|rat\s*(?:poison|kill\w*)|phenyl|phenol|bleach|kerosene|acid|harpic|zeher|zehar|jahar|jehar|keetnashak|chuha\s*maar\w*)'
+      - '\b(?:zeher|zehar|jahar|jehar|poison|keetnashak|keet\s+nashak|pesticide|chuha\s*maar\w*|phenyl|kerosene)\s+(?:\S+\s+){0,2}?(?:kha|pi|pee|le|liya|li|lia|gaya|gayi)\b'
+      - '\b(?:poisoned|poisoning|overdos\w*|over\s+dos\w*|over-dos\w*)\b|\bod\s+on\b|\btoo\s+many\s+(?:\S+\s+)?(?:pills|tablets|tablet|medicines)\b|\b(?:bahut|saari|sari|puri)\s+(?:\S+\s+)?(?:goliyan|goli|tablets|dawai|dawaiyan)\s+(?:kha|le)\w*'
+      - 'ज़हर|जहर|कीटनाशक|ओवरडोज़|ओवरडोज'
+  - id: BITES_AND_STINGS
+    category: poisoning_overdose_bites
+    floor: emergency
+    patterns:
+      - '\b(?:snake|snak|snek|saanp|sanp|saap|sap|naag|nag|cobra|krait|viper)\s+(?:\S+\s+){0,2}?(?:bit\w*|bite|kaat\w*|kat\w*|dans\w*|das\w*|dasa|dasaa|dank\w*)'
+      - '\b(?:bitten|bit|stung)\s+by\s+(?:a\s+|an\s+|the\s+)?(?:\S+\s+)?(?:snake|dog|cobra|monkey|cat|rat|bat|scorpion|jackal|bee\w*|wasp\w*)'
+      - '\b(?:dog|dogs|kutta|kutte|kuta|kute|kuttey|monkey|bandar|cat|billi|rat|chuha)\s+(?:\S+\s+){0,2}?(?:bit\w*|bite|kaat\w*|kat\s+(?:liya|lia|gaya|li))'
+      - '\b(?:snake|dog|monkey|cat|rat|scorpion)\s*-?\s*bite\b|\b(?:scorpion|bichchhu|bichhu|bicchu|bichu)\s+(?:\S+\s+){0,2}?(?:sting\w*|bit\w*|kaat\w*|dank\w*|dunk\w*)'
+      - '(?:सांप|साँप|कुत्ते|कुत्ता|बंदर|बिच्छू)\s*(?:ने)?\s*(?:काट|डस|डंक)\w*'
+
+  # ---------------------------------------------------------------- severe allergic reaction
+  - id: SEVERE_ALLERGIC_REACTION
+    category: severe_allergic_reaction
+    floor: emergency
+    patterns:
+      - '\b(?:face|lips?|tongue|throat|mouth|gala|gale|hoth|honth|jeebh|jibh|chehra|chehre)\s+(?:\S+\s+){0,3}?(?:swell\w*|swolen|swolle?n|puff\w*|sooj\w*|suj\w*|fool\s+ga\w*|phool\s+ga\w*)'
+      - '\b(?:swell\w*|swollen|swolen|sooj\w*|sujan)\s+(?:\S+\s+){0,3}?(?:face|lips?|tongue|throat|mouth|gala|hoth|honth|jeebh)\b'
+      - '\bthroat\s+(?:\S+\s+){0,2}?(?:closing|tight\w*|swell\w*|clos\w*\s+up)|\banaphyla\w*|\ballergic\s+(?:shock|reaction)\b'
+      - '(?:गला|होंठ|चेहरा|जीभ)\s*(?:\S+\s*){0,2}?सूज\w*'
+
+  # ---------------------------------------------------------------- severe abdominal pain
+  - id: ABD_SEVERE_PAIN
+    category: severe_abdominal_pain
+    floor: urgent
+    patterns:
+      - '<<SEVERE>>\s+(?:\S+\s+){0,3}?<<ABDO>>\s*(?:\S+\s+){0,2}?<<PAIN>>'
+      - '<<ABDO>>\s*(?:\S+\s+){0,3}?<<SEVERE>>\s*(?:\S+\s+){0,2}?<<PAIN>>'
+      - '<<SEVERE>>\s+(?:\S+\s+){0,2}?<<PAIN>>\s+(?:in|on|at)\s+(?:my\s+|the\s+|his\s+|her\s+)?(?:\S+\s+){0,3}?<<ABDO>>'
+      - '<<ABDO>>\s*(?:\S+\s+){0,3}?<<PAIN>>\s*(?:\S+\s+){0,3}?<<SEVERE>>'
+      - 'पेट\s*(?:\S+\s*){0,3}?(?:बहुत|तेज़|तेज|असहनीय)\s*(?:\S+\s*)?दर्द'
+  - id: ABD_SEVERE_WITH_DANGER
+    category: severe_abdominal_pain
+    floor: emergency
+    all_of:
+      - ['<<SEVERE>>\s+(?:\S+\s+){0,3}?<<ABDO>>\s*(?:\S+\s+){0,2}?<<PAIN>>', '<<ABDO>>\s*(?:\S+\s+){0,3}?<<SEVERE>>\s*(?:\S+\s+){0,2}?<<PAIN>>',
+         '<<SEVERE>>\s+(?:\S+\s+){0,2}?<<PAIN>>\s+(?:in|on|at)\s+(?:my\s+|the\s+|his\s+|her\s+)?(?:\S+\s+){0,3}?<<ABDO>>', '<<ABDO>>\s*(?:\S+\s+){0,3}?<<PAIN>>\s*(?:\S+\s+){0,3}?<<SEVERE>>',
+         'पेट\s*(?:\S+\s*){0,3}?(?:बहुत|तेज़|तेज|असहनीय)\s*(?:\S+\s*)?दर्द']
+      - ['\b(?:faint\w*|passed\s+out|collapsed|behosh|unconscious)\b', '\b(?:rigid|board[- ]like|hard\s+as\s+(?:a\s+)?(?:board|rock|stone))\b', '<<ABDO>>\s+(?:is\s+)?(?:very\s+|really\s+)?(?:hard|rigid|tight\s+like)',
+         '<<PREG>>', 'बेहोश|गर्भ\w*']
+  - id: VOMITING_BLOOD
+    category: severe_abdominal_pain
+    floor: emergency
+    patterns:
+      - '\bvomit\w*\s+(?:\S+\s+){0,2}?blood\b|\bblood\w*\s+(?:in\s+(?:the\s+|my\s+)?)?vomit\w*|\bthrow\w*\s+up\s+blood\b|\bkhoon\s+ki\s+ult\w*|\bult\w*\s+(?:\S+\s+)?(?:me|mein|main)\s+khoon\b|\bblack\s+(?:tarry\s+)?stool|खून\s*की\s*उल्टी|उल्टी\s*में\s*खून'
+
+  # ---------------------------------------------------------------- self-harm or suicidal thoughts
+  - id: SELF_HARM
+    category: self_harm
+    floor: emergency
+    crisis: true
+    negatable: false
+    patterns:
+      - '\b(?:want|wanna|wish|going|plan\w*|tried|trying|try|thinking\s+(?:of|about)|feel\s+like)\s+(?:to\s+)?(?:\S+\s+){0,2}?(?:die|kill\s+(?:my|him|her)sel(?:f|ves)|end\s+(?:my|it|this|his|her)\b|hurt\s+myself|harm\s+myself|cut\s+myself)'
+      - '\b(?:suicid\w*|sucide\w*|suiside\w*|suiside|kill\s+myself|killing\s+myself|end\s+my\s+life|ending\s+my\s+life|take\s+my\s+(?:own\s+)?life|end\s+it\s+all|don''?t\s+want\s+to\s+(?:live|be\s+alive|exist)|no\s+reason\s+to\s+live|better\s+off\s+dead|self[- ]?harm\w*)\b'
+      - '\b(?:took|taken|have\s+taken|swallowed|ate|kha\s+li\w*)\s+(?:\S+\s+){0,4}?(?:pills|tablets|medicine\w*|poison|goliyan|goli)\s+(?:\S+\s+){0,3}?(?:to\s+(?:die|end|kill)|marne\s+ke\s+liye)'
+      - '\b(?:marna|mar\s+jana|mar\s+jaana|mar\s+jaun|mar\s+jaoon|mar\s+jau|khud\s+ko\s+khatam)\s+(?:\S+\s+){0,2}?(?:chahta|chahti|chahte|chaahta|chahata)\b|\b(?:jeena|jina|zinda\s+nahi\s+rehna)\s+(?:\S+\s+)?(?:nahi|nahin|nhi)\s+(?:chahta|chahti|chahte)\b|\b(?:khudkushi|khudkhushi|aatmahatya|atmahatya|aatmhatya|suicide\s+kar\w*)\b'
+      - 'आत्महत्या|ख़ुदकुशी|खुदकुशी|मरना\s*चाहत\w*|जीना\s*नहीं\s*चाहत\w*|मर\s*जाना\s*चाहत\w*'

@@ -2,3 +2,7 @@
 streamlit>=1.38
 databricks-sdk>=0.169.0
 openai>=1.40
+# Symptom navigation API (src/hackathon/navigation); Databricks Apps pre-installs fastapi and uvicorn
+fastapi>=0.115
+pydantic>=2
+uvicorn>=0.30

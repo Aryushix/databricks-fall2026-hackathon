@@ -15,6 +15,9 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: pip install ruff pytest pandas numpy phonenumbers pyyaml beautifulsoup4
+      - name: Navigation test dependencies
+        # FastAPI/pydantic for src/hackathon/navigation; httpx for FastAPI's test client
+        run: pip install fastapi "pydantic>=2" httpx
       - name: Lint
         run: ruff check .
       - name: Syntax check
