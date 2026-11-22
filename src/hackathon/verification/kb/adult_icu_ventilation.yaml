@@ -1,0 +1,52 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: adult_icu_ventilation
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Adult ICU with ventilation
+category: critical care
+specialization: advanced
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\b(?:medical |surgical |adult |general )?icu\b'
+  - '\bintensive care (?:unit|units|services?|facility|facilities)\b'
+  - '\bcritical care (?:unit|units|services?|facility|facilities|department)\b'
+  - '\b(?:micu|sicu)\b'
+
+children:
+  - id: ventilation
+    patterns: ['\bventilators?\b', '\bmechanical ventilation\b', '\bventilator (?:support|beds?)\b']
+  - id: hdu
+    patterns: ['\bhigh dependency unit\b', '\bhdu\b']
+
+ambiguous: []
+
+confusables:
+  - id: neonatal_paediatric_icu
+    why: a newborn or child ICU, not an adult ICU
+    patterns: ['\b(?:nicu|picu|sncu)\b', '\b(?:neonatal|newborn|paediatric|pediatric) (?:icu|intensive care)\b']
+  - id: mobile_or_home_icu
+    why: an ambulance or home service, not an ICU bed
+    patterns: ['\bicu (?:ambulances?|on wheels)\b', '\b(?:home|mobile) icu\b', '\bicu at home\b', '\bicu care at home\b']
+  - id: cardiothoracic_icu
+    why: covered by the cath / cardiac KBs, not general adult ICU
+    patterns: ['\bct ?icu\b', '\bcvts? icu\b']
+  - id: non_medical_ventilation
+    why: building ventilation
+    patterns: ['\b(?:natural|cross|good|proper) ventilation\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: '24x7 ICU with ventilators', match: exact}
+  - {text: 'Ventilator support', match: child}
+  - {text: 'NICU', match: confusable}
+  - {text: 'ICU ambulance', match: confusable}
+  - {text: 'Intensive care unit', match: exact}

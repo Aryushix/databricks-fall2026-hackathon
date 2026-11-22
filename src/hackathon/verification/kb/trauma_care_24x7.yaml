@@ -1,0 +1,41 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: trauma_care_24x7
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: 24x7 trauma care
+category: emergency
+specialization: advanced
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\btrauma (?:centre|center|centres|centers|care|unit|units|ward|icu|services?|department|team)\b'
+  - '\blevel (?:i|1|ii|2) trauma\b'
+  - '\bpolytrauma\b'
+  - '\b(?:accident|road traffic accident|rta) (?:and|&) (?:trauma|emergency) (?:care|centre|center)\b'
+
+children: []
+
+ambiguous: []
+
+confusables:
+  - id: psychological_trauma
+    why: mental-health trauma, not injury care
+    patterns: ['\b(?:psychological|emotional|childhood|sexual) trauma\b', '\btrauma[- ](?:informed|focused) (?:therapy|counsel\w*|care)\b', '\bptsd\b', '\btrauma (?:therapy|counsel\w*|healing)\b']
+  - id: narrow_trauma
+    why: a single-specialty injury service, not trauma care
+    patterns: ['\b(?:dental|ocular|eye|facial|sports) trauma\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: '24x7 trauma centre', match: exact}
+  - {text: 'Polytrauma management', match: exact}
+  - {text: 'Childhood trauma counselling', match: confusable}
+  - {text: 'Dental trauma', match: confusable}

@@ -1,0 +1,53 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: mri
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: MRI
+category: imaging
+specialization: advanced
+plausible_facility_types: [hospital, clinic]
+
+synonyms:
+  - '\bmagnetic resonance imaging\b'
+  - '\bmri (?:scans?|scanners?|scanning|machines?|units?|facility|facilities|services?|centre|center|suite|department)\b'
+  - '\b(?:\d(?:\.\d)?)\s?(?:t|tesla) (?:mri|magnet|scanner)\b'
+  - '\b(?:open|wide[- ]bore|silent) mri\b'
+
+children:
+  - id: mri_examinations
+    patterns: ['\bmrcp\b', '\bmr (?:angiography|angiogram|venography|spectroscopy|urography|enterography)\b', '\bmri (?:brain|spine|knee|shoulder|abdomen|pelvis|breast|prostate|cardiac|whole body)\b']
+
+ambiguous:
+  - pattern: '\bmri\b'
+    upgrade_if: '\b(?:ct|x-?rays?|ultrasound|usg|sonography|scans?|radiolog\w*|imaging|diagnostic\w*|tesla|mammograph\w*|doppler|pet)\b'
+    confusable_if: '\b(?:institute|research|university|society)\b'
+
+confusables:
+  - id: mri_safe_device
+    why: an implant or device described as safe in an MRI scanner
+    patterns: ['\bmri[- ](?:compatible|safe|conditional)\b']
+  - id: functional_mri_research
+    why: research use, not a clinical scanner
+    patterns: ['\bfmri\b', '\bfunctional mri\b']
+  - id: mri_course
+    why: training, not a scanner
+    patterns: ['\bmri (?:technology|technician|technologist) (?:course|training|programme|program)\b']
+  - id: address
+    why: an address landmark
+    patterns: ['\b(?:near|opp\.?|opposite|behind|beside|next to|in front of)\s+(?:the\s+)?(?:govt\.?\s+|government\s+|district\s+|civil\s+)?mri (?:centre|center)\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: '1.5 Tesla MRI scanner', match: exact}
+  - {text: 'MRI scan facility available', match: exact}
+  - {text: 'CT, MRI and X-ray', match: child}
+  - {text: 'MRCP', match: child}
+  - {text: 'MRI-compatible pacemaker', match: confusable}

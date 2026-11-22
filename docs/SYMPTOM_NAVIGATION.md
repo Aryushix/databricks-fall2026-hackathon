@@ -73,9 +73,10 @@ guessed coordinates or phone numbers, or anything from model output beyond the s
 
 ## What it can verify today
 
-Four care needs have verifier KBs, so only they can be a capability match: **hemodialysis**, **cardiac
-catheterization**, **emergency department** and **CT scan**. Every other need (ICU, trauma care, burn unit, NICU,
-general surgery, orthopedics, eye care…) shows "can't be verified for any facility yet" and its unverified
+Fifteen care needs have verifier KBs, so only they can be a capability match: **hemodialysis**, **cardiac
+catheterization**, **emergency department**, **CT scan**, and (drafts, 2026-11-22) MRI, blood bank, adult ICU, NICU, PICU,
+burn unit, 24x7 trauma care, anti-snake venom, anti-rabies, general surgery, and eye care through cataract surgery.
+Every other need (stroke thrombolysis, 24x7 C-section, orthopedics…) shows "can't be verified for any facility yet" and its unverified
 signals, and the call-ahead list carries the answer. Adding a KB file under `src/hackathon/verification/kb/` and re-running the verifier
 turns the need on here with no code change. The recommended build order is in the design note, section 3.
 

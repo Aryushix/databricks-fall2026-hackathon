@@ -1,0 +1,45 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: nicu
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Newborn intensive care (NICU)
+category: critical care
+specialization: advanced
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\bnicu\b'
+  - '\bneonatal (?:intensive care|icu)\b'
+  - '\bnewborn (?:intensive care|icu)\b'
+  - '\blevel (?:iii|3|ii|2) nicu\b'
+
+children:
+  - id: sncu
+    patterns: ['\bsncu\b', '\bsick newborn care unit\b', '\bspecial newborn care unit\b']
+  - id: neonatal_ventilation
+    patterns: ['\bneonatal ventilat\w*\b', '\bcpap for (?:newborns?|neonates?|babies)\b']
+
+ambiguous: []
+
+confusables:
+  - id: newborn_routine
+    why: routine newborn care is not intensive care
+    patterns: ['\bnewborn care corner\b', '\bnbcc\b', '\bnewborn (?:check[- ]?ups?|vaccinations?)\b']
+  - id: training
+    why: a course, not a unit
+    patterns: ['\bnicu (?:nursing )?(?:course|training)\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'Level III NICU', match: exact}
+  - {text: 'Neonatal intensive care unit', match: exact}
+  - {text: 'SNCU', match: child}
+  - {text: 'Newborn care corner', match: confusable}

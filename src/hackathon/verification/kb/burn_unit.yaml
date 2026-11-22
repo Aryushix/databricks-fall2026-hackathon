@@ -1,0 +1,36 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: burn_unit
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Burn unit
+category: surgical
+specialization: advanced
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\bburns? (?:unit|units|ward|wards|centre|center|icu|care unit|department)\b'
+  - '\bburns? (?:care|management|treatment)\b'
+  - '\bburns? and plastic surgery\b'
+
+children: []
+
+ambiguous: []
+
+confusables:
+  - id: not_burns
+    why: not about burn injuries
+    patterns: ['\b(?:fat|calorie)s? burn\w*\b', '\bburning (?:sensation|micturition|feet)\b', '\bburnout\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'Burns ward', match: exact}
+  - {text: 'Burn care unit', match: exact}
+  - {text: 'Calorie burn programme', match: confusable}

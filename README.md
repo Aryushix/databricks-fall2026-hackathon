@@ -2,7 +2,7 @@
 
 > **CMU Datathon, Fall 2026: Find the right care.** Given a service (dialysis, emergency C-section, NICU, MRI…) and a location in India, recommend the best facilities and show the evidence behind each pick. Brief and checklist: [`docs/CHALLENGE.md`](docs/CHALLENGE.md).
 >
-> **What we built:** "Find care", a page where a community health worker or NGO coordinator picks a **service** (dialysis, cath lab, emergency department, CT, and 21 more) and types a **town, district or PIN code**. It gets nearby facilities, ranked by how well documented evidence supports that the facility offers the service, each with the exact quote and link behind it and how sure we are.
+> **What we built:** "Find care", a page where a community health worker or NGO coordinator picks a **service** (25 of them, 15 evidence-verified: dialysis, cath lab, emergency department, CT, MRI, blood bank, ICU, NICU and more) and types a **town, district or PIN code**. It gets nearby facilities, ranked by how well documented evidence supports that the facility offers the service, each with the exact quote and link behind it and how sure we are.
 
 | Teammate | GitHub | Working on |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ flowchart LR
 2. **Check locations** (`01b_verify_locations`): each facility's PIN, city and coordinates are compared with India Post. The result is a point to measure from and a `location_confidence`. See `docs/LOCATION_CHECKS.md`.
 3. **Crawl** (laptop only, `tools/facility_crawler.py`): we fetched each facility's own website, respecting `robots.txt`. 5,213 of 8,060 sites returned pages.
 4. **Verify services in advance** (`src/hackathon/verification`; laptop CLI or notebook `07`):
-   - Every facility × service pair gets one record: a status, a confidence score, the exact quotes behind it and their sources. That's 39,956 records for 4 services.
+   - Every facility × service pair gets one record: a status, a confidence score, the exact quotes behind it and their sources. That's 149,835 records for 15 services.
    - The app only looks these records up. Nothing is verified at request time.
    - Each verifiable service has a knowledge base (`src/hackathon/verification/kb/*.yaml`): the names that count, look-alikes that don't (CT angiography isn't a cath lab), and negations, outsourcing and referrals.
    - Statuses:
@@ -64,6 +64,17 @@ A claim's strength = claim type × source reliability (own website 1.0, dataset 
 | Hemodialysis | 472 | 708 | 172 | 8,637 |
 | CT scan | 362 | 1,048 | 949 | 7,621 |
 | Cardiac catheterization | 88 | 331 | 600 | 8,970 |
+| MRI (draft) | 104 | 892 | 200 | 8,788 |
+| Blood bank (draft) | 125 | 523 | 165 | 9,171 |
+| Adult ICU with ventilation (draft) | 590 | 1,628 | 578 | 7,192 |
+| NICU (draft) | 194 | 649 | 198 | 8,947 |
+| PICU (draft) | 78 | 325 | 702 | 8,883 |
+| Burn unit (draft) | 20 | 146 | 68 | 9,755 |
+| 24x7 trauma care (draft) | 200 | 792 | 366 | 8,629 |
+| Anti-snake venom (draft) | 1 | 6 | 1 | 9,981 |
+| Anti-rabies vaccine (draft) | 1 | 4 | 39 | 9,945 |
+| General surgery (draft) | 764 | 1,761 | 578 | 6,884 |
+| Cataract surgery (draft) | 251 | 503 | 87 | 9,148 |
 
 - **Coverage:** at 71 sampled India Post locations (2 per state), a verified dialysis facility is within 100 km for 83% of them (92% within 150 km). For the emergency test cases, a verified match (mostly an emergency department) is within 50 km for 89–90%.
 - **Consistency:** every recommendation's status matched the verifier's record (7,451 of 7,451).
@@ -71,7 +82,7 @@ A claim's strength = claim type × source reliability (own website 1.0, dataset 
 - **Accuracy is not measured yet:** that needs people to label a sample. The plan is in `docs/verification_benchmark_design.md`.
 
 **Known limits:**
-- Only 4 services can be verified; the other 21 get the call-to-check list.
+- 15 services can be verified. 11 of them (MRI, blood bank, adult ICU, NICU, PICU, burn unit, trauma care, anti-snake venom, anti-rabies, general surgery, cataract surgery) were drafted on 2026-11-22, and a person hasn't read their results yet; the page marks them as draft. The other 10 get the call-to-check list.
 - Only about half the facilities have a crawlable website, so the rest can't be CONFIRMED.
 - Distances are straight-line, not road.
 - A result describes documented evidence. It isn't a guarantee that a service is available today.
