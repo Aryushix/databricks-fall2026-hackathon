@@ -17,10 +17,11 @@ _SRC = str(_REPO / "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
+from schemas import Evidence, EvidenceStatus, Hospital, TrustLabel  # noqa: E402
+
 from hackathon.navigation.contract import ServiceRequest  # noqa: E402
 from hackathon.navigation.locate import default_resolver  # noqa: E402
 from hackathon.navigation.service import build_navigator  # noqa: E402
-from schemas import Evidence, EvidenceStatus, Hospital, TrustLabel  # noqa: E402
 
 # The chatbot/frontend use ordinary service terms; the recommender uses care-need IDs.
 _SERVICE_ALIASES = {
