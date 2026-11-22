@@ -21,7 +21,7 @@ models:
   llm_endpoint: null
   llm_temperature: 0.0
   llm_max_tokens: 600
-  rule_classifier_version: rules_v1
+  rule_classifier_version: rules_v2
   llm_classifier_version: llm_v1
 
 # Where each kind of evidence comes from, from most to least reliable. A source that can't be

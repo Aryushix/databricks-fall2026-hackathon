@@ -10,8 +10,12 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import multiprocessing
+import shutil
+import tempfile
 import time
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,6 +30,7 @@ from .decide import POSITIVE, decide
 from .entities import FacilityProfile, check_entity
 from .kb import KBEntry, PatternTagger, kb_version, load_kb
 from .records import Claim, ConceptMatch, Evidence
+from .runlog import event
 from .scoring import HeuristicScorer, Scorer, is_stale
 
 log = logging.getLogger(__name__)
@@ -33,6 +38,40 @@ log = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "verification.yaml"
 MAX_LISTED = 8          # evidence items written per list; counts cover the rest
+MIN_PARALLEL_CLAIMS = 50_000   # below this, starting worker processes costs more than it saves
+SHARDS_PER_WORKER = 4          # several shards per process keep the workers evenly loaded
+
+
+# ---------------------------------------------------------------------- worker processes
+# Workers are started with "spawn" (the macOS default, and safe with threads), so everything they
+# need arrives through these module-level functions. Each worker rebuilds the tagger or a verifier from
+# the same KB files and config; the parent checks the KB version matches.
+_WORKER: dict = {}
+
+
+def _tag_init(concepts, expected_kb_version):
+    entries = load_kb(concepts)
+    if kb_version(entries) != expected_kb_version:
+        raise RuntimeError("KB files changed while the run was starting")
+    _WORKER["tagger"] = PatternTagger(entries)
+
+
+def _tag_chunk(items):
+    tagger = _WORKER["tagger"]
+    return [(cid, ms) for cid, text, field in items if (ms := tagger.tag(text, field))]
+
+
+def _verify_shard(task):
+    """Verify one shard of facilities for every concept, writing one part file per concept."""
+    config_path, concepts, state, part_dir, shard_no = task
+    v = Verifier(config_path, concepts, use_llm=False)
+    v.facilities, v.profiles, v.claims_by_fac = state["facilities"], state["profiles"], state["claims_by_fac"]
+    v.tags, v.copied, v.shared = state["tags"], state["copied"], state["shared"]
+    for cid in concepts:
+        with open(Path(part_dir) / f"{cid}.{shard_no:05d}.jsonl", "w", encoding="utf-8") as fh:
+            for uid in v.facilities.index:
+                fh.write(json.dumps(v.verify(uid, cid), ensure_ascii=False) + "\n")
+    return shard_no
 
 
 def load_config(path: str | Path = DEFAULT_CONFIG) -> tuple[dict, str]:
@@ -60,7 +99,11 @@ def make_classifier(cfg: dict, use_llm: bool, cache_path: str | Path | None, ent
 
 class Verifier:
     def __init__(self, config_path=DEFAULT_CONFIG, concepts=None, classifier: ClaimClassifier | None = None,
-                 scorer: Scorer | None = None, use_llm: bool = False, cache_path=None):
+                 scorer: Scorer | None = None, use_llm: bool = False, cache_path=None, workers: int = 1,
+                 min_parallel_claims: int = MIN_PARALLEL_CLAIMS):
+        self.config_path = str(config_path)
+        self.workers, self.min_parallel_claims = max(1, int(workers)), min_parallel_claims
+        self.use_llm = use_llm
         self.cfg, self.config_hash = load_config(config_path)
         self.entries = load_kb(concepts)
         self.kb_version = kb_version(self.entries)
@@ -76,15 +119,18 @@ class Verifier:
         self.profiles = {r["unique_id"]: FacilityProfile.build(r["unique_id"], r.get("name"), r.get("address_city"))
                          for r in facilities.to_dict("records")}
         claims = ledger.build_ledger(facilities)
+        event(log, "ledger", facilities=len(facilities), claims=len(claims), seconds=round(time.time() - t0, 1))
         if crawl_db:
-            claims += ledger.official_claims(crawl_db, facilities, self.cfg["reliability"]["chain_domain_min_facilities"])
+            t1 = time.time()
+            official = ledger.official_claims(crawl_db, facilities, self.cfg["reliability"]["chain_domain_min_facilities"])
+            claims += official
+            event(log, "official_pages", claims=len(official), seconds=round(time.time() - t1, 1))
         self.shared = ledger.shared_content_sizes(facilities)
-        tags: dict[str, list[ConceptMatch]] = {}
-        for c in claims:
-            ms = self.tagger.tag(c.text, c.field)
-            if ms:
-                tags[c.claim_id] = ms
+        t1 = time.time()
+        tags = self._tag_all(claims)
         tagged = [c for c in claims if c.claim_id in tags]
+        event(log, "tagging", claims=len(claims), tagged=len(tagged), concepts=len(self.entries),
+              workers=self._tag_workers(len(claims)), seconds=round(time.time() - t1, 1))
         cc = self.cfg["copies"]
         copied = copies.block_copies(claims, self.profiles, cc["block_min_shared_items"], cc["block_min_share"],
                                      cc["min_facilities"], cc["block_item_max_df"])
@@ -94,9 +140,38 @@ class Verifier:
         for c in tagged:
             self.claims_by_fac[c.unique_id].append(c)
         self.tags, self.copied = tags, copied
-        log.info("build: claims=%d tagged=%d copied=%d seconds=%.1f", len(claims), len(tagged),
-                 sum(1 for c in tagged if c.claim_id in copied), time.time() - t0)
+        event(log, "build", claims=len(claims), tagged=len(tagged),
+              copied=sum(1 for c in tagged if c.claim_id in copied), seconds=round(time.time() - t0, 1))
         return self
+
+    # ----------------------------------------------------------------- parallel helpers
+    def _tag_workers(self, n_claims: int) -> int:
+        """Parallel tagging only for the default pattern tagger (a swapped-in tagger runs in-process)."""
+        if self.workers <= 1 or n_claims < self.min_parallel_claims or type(self.tagger) is not PatternTagger:
+            return 1
+        return self.workers
+
+    def _tag_all(self, claims: list[Claim]) -> dict[str, list[ConceptMatch]]:
+        workers = self._tag_workers(len(claims))
+        if workers == 1:
+            return {c.claim_id: ms for c in claims if (ms := self.tagger.tag(c.text, c.field))}
+        items = [(c.claim_id, c.text, c.field) for c in claims]
+        size = max(1000, len(items) // (workers * SHARDS_PER_WORKER) + 1)
+        chunks = [items[i:i + size] for i in range(0, len(items), size)]
+        tags: dict[str, list[ConceptMatch]] = {}
+        with ProcessPoolExecutor(workers, mp_context=multiprocessing.get_context("spawn"), initializer=_tag_init,
+                                 initargs=(list(self.entries), self.kb_version)) as ex:
+            for part in ex.map(_tag_chunk, chunks):
+                tags.update(part)
+        return tags
+
+    def _shard_state(self, uids) -> dict:
+        claims = {u: self.claims_by_fac.get(u, []) for u in uids}
+        ids = {c.claim_id for cs in claims.values() for c in cs}
+        return {"facilities": self.facilities.loc[list(uids)], "profiles": {u: self.profiles[u] for u in uids},
+                "claims_by_fac": claims, "tags": {k: self.tags[k] for k in ids},
+                "copied": {k: self.copied[k] for k in ids if k in self.copied},
+                "shared": {u: self.shared[u] for u in uids if u in self.shared}}
 
     # ----------------------------------------------------------------- stage 5: labels -> evidence
     def _evidence(self, claim: Claim, m: ConceptMatch) -> Evidence:
@@ -221,10 +296,44 @@ class Verifier:
         }
 
     def run(self, concepts=None):
-        """Yield one record per facility and concept."""
-        for cid in concepts or list(self.entries):
-            for uid in self.facilities.index:
-                yield self.verify(uid, cid)
+        """Yield one record per facility and concept: concepts in order, facilities in input order.
+
+        With workers > 1 (rules pass only), facility shards are verified in worker processes and the
+        records come back in exactly the same order as a single-process run."""
+        concepts = list(concepts or self.entries)
+        # rules-only (the label cache only matters for paid model calls); a model pass stays in one
+        # process, since it is rate-limited by the endpoint and shares one SQLite label cache
+        rules_only = type(getattr(self.classifier, "inner", self.classifier)) is RuleClassifier
+        parallel = self.workers > 1 and not self.use_llm and rules_only and len(self.facilities) >= 2 * self.workers
+        if not parallel:
+            for cid in concepts:
+                t0 = time.time()
+                for uid in self.facilities.index:
+                    yield self.verify(uid, cid)
+                event(log, "verify", concept=cid, records=len(self.facilities), workers=1, seconds=round(time.time() - t0, 1))
+            return
+        yield from self._run_parallel(concepts)
+
+    def _run_parallel(self, concepts):
+        uids = list(self.facilities.index)
+        n = min(len(uids), self.workers * SHARDS_PER_WORKER)
+        size = -(-len(uids) // n)
+        shards = [uids[i:i + size] for i in range(0, len(uids), size)]
+        part_dir = Path(tempfile.mkdtemp(prefix="verify-parts-"))
+        try:
+            t0 = time.time()
+            tasks = [(self.config_path, concepts, self._shard_state(s), str(part_dir), k) for k, s in enumerate(shards)]
+            with ProcessPoolExecutor(self.workers, mp_context=multiprocessing.get_context("spawn")) as ex:
+                list(ex.map(_verify_shard, tasks))
+            event(log, "verify", concepts=len(concepts), records=len(uids) * len(concepts), workers=self.workers,
+                  shards=len(shards), seconds=round(time.time() - t0, 1))
+            for cid in concepts:
+                for k in range(len(shards)):
+                    with open(part_dir / f"{cid}.{k:05d}.jsonl", encoding="utf-8") as fh:
+                        for line in fh:
+                            yield json.loads(line)
+        finally:
+            shutil.rmtree(part_dir, ignore_errors=True)
 
     def normalize_treatment(self, text: str) -> str:
         """Map a requested treatment to a KB concept using the KB's own patterns."""

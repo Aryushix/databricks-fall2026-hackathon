@@ -14,7 +14,7 @@ from __future__ import annotations
 import gzip
 import json
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 import numpy as np
 
@@ -23,11 +23,18 @@ from ..cleaning import haversine_km
 STATUS_ORDER = {"CONFIRMED": 0, "LIKELY": 1, "NOT CONFIRMED": 2, "UNVERIFIED": 3, "CONTRADICTED": 4}
 
 
-def load_records(path: str | Path) -> list[dict]:
+def iter_records(path: str | Path) -> Iterator[dict]:
+    """Stream records from records.jsonl or records.jsonl.gz without holding them all in memory."""
     path = Path(path)
     opener = gzip.open if path.suffix == ".gz" else open
     with opener(path, "rt", encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+        for line in fh:
+            if line.strip():
+                yield json.loads(line)
+
+
+def load_records(path: str | Path) -> list[dict]:
+    return list(iter_records(path))
 
 
 def concept_of(rec: dict) -> str:

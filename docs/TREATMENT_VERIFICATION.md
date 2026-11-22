@@ -118,6 +118,41 @@ Every one of the 16,705 evidence quotes in that run was checked to be verbatim i
 cached page. Neither family has a credible negative claim in the data, so CONTRADICTED is covered only by
 the synthetic regression suite.
 
+## Phase 3: batch runs and more treatments
+
+The CLI is also `python -m hackathon.verification` with four subcommands:
+
+```bash
+PYTHONPATH=src python -m hackathon.verification run \
+    --facilities ~/hackathon-data/facilities_verified.csv --crawl-db ~/hackathon-data/crawl.sqlite \
+    --out-dir ~/hackathon-data/verification --workers 4 --log-format json
+
+PYTHONPATH=src python -m hackathon.verification show --records ~/hackathon-data/verification/records.jsonl \
+    --hospital-id <unique_id> --treatment ct_scan
+PYTHONPATH=src python -m hackathon.verification profile --records ~/hackathon-data/verification/records.jsonl \
+    --hospital-id <unique_id>
+PYTHONPATH=src python -m hackathon.verification rank --records ~/hackathon-data/verification/records.jsonl \
+    --treatment emergency_department --lat <lat> --lon <lon> --radius-km 50
+```
+
+- `--workers N` tags claims and verifies facility shards in N processes. It applies to the rule pass only, and only once there are at least 50,000 claims. Output is identical to a single-process run, including record order; a test checks this. A model pass (`--llm`) stays in one process, because it shares one label cache and the endpoint's rate limit.
+- Every run writes `run_log.jsonl`: timings and counts per stage, with no claim text.
+- `show`, `profile` and `rank` read `.jsonl` or `.jsonl.gz` records (query modes 1, 2 and 3).
+- On Databricks, `notebooks/07_verify_treatments.py` runs the same pipeline as a job. It writes `records.jsonl.gz`, `summary.json`, `run_log.jsonl` and `labels.sqlite` to the `raw` volume under `navigation/verification`, plus the Delta table `silver_treatment_verification`. It hasn't been run on the workspace yet.
+
+**Wave A, 2026-11-22.** New KBs, all `review_status: draft`. These are rule-pass counts on the same 9,989 facilities, not accuracy:
+
+| Treatment | CONFIRMED | LIKELY | NOT CONFIRMED | UNVERIFIED | CONTRADICTED | Flagged for review |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Emergency department | 83 | 2,433 | 814 | 6,654 | 5 | 2,575 |
+| CT scan | 34 | 1,210 | 655 | 8,081 | 9 | 1,279 |
+
+Before committing, every CONFIRMED record and a sample of LIKELY records were read. That review added these confusables:
+- emergency department: single-specialty emergency lines (cardiac, neuro, ENT, eye, dental, veterinary), emergency home care, ambulances, and the public "911 emergency services" line;
+- CT: the bare acronym "CTA", which also names organisations.
+
+The rule classifier also learned "via an outside …" as outsourcing. That change is `rules_v2`, so cached `rules_v1` labels aren't reused. Cardiac catheterization and hemodialysis counts are unchanged.
+
 ## Tests
 
 `pytest` runs `tests/test_verification_components.py` (KB, ledger, every assertion type, model-output
@@ -161,3 +196,8 @@ about 73 labeled CONFIRMED pairs with no errors, or 142 with at most 2.
 - **Chain sites** are detected only among facilities in this dataset; a chain with one record here passes
   as a branch site.
 - **Scores are heuristic** until calibrated on ground-truth labels.
+- **Wave A boundaries are policy choices.** A single-specialty emergency line ("24/7 emergency cardiac
+  care", "neuro emergency care") doesn't count as an emergency department; the trauma KB, still to come,
+  will cover trauma. An ambulance is a non-key prerequisite, never evidence of a department. A CT exam
+  named in a news report about one patient counts as a CT scanner, the same way a procedure performed
+  counts for the other treatments.

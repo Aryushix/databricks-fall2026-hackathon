@@ -1,0 +1,62 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format).
+# "Does this facility have a working CT scanner?" Examples are SYNTHETIC.
+
+concept_id: ct_scan
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: CT scan
+category: imaging
+specialization: intermediate
+plausible_facility_types: [hospital, clinic]   # standalone diagnostic centres are often listed as clinics
+
+codes:
+  mesh:
+    - {id: D014057, name: "Tomography, X-Ray Computed"}
+
+synonyms:
+  - '\bct[- ]?scan(?:s|ning|ners?)?\b'
+  - '\bcat[- ]scan(?:s|ning|ners?)?\b'
+  - '\b(?:x-ray )?computed (?:axial )?tomography\b'
+  - '\b(?:\d{1,3}|single|dual|multi)[- ]?slice (?:ct|ct scan(?:ner)?|scanner|mdct)\b'
+  - '\b(?:mdct|msct)\b'
+  - '\bct (?:imaging|services?|facility|facilities|machine|unit|suite|department)\b'
+
+children:
+  - id: ct_examinations                  # a named CT exam implies the scanner
+    patterns: ['\b(?:hrct|cect|ncct)\b', '\bct (?:head|brain|chest|thorax|abdomen|kub|pns|spine|neck|urography|enterography|colonography|perfusion)\b',
+               '\bct[- ]guided (?:biops\w*|fnac|drainage|procedures?)\b', '\bct (?:coronary )?angio(?:graphy|gram)\b',
+               '\bcoronary calcium scor\w*\b']
+
+ambiguous: []
+
+confusables:
+  - id: cone_beam_ct
+    why: dental and ENT cone-beam CT is not a general CT scanner
+    patterns: ['\bcone[- ]beam (?:ct|computed tomography)\b', '\bcbct\b']
+  - id: pet_ct
+    why: its own treatment (PET-CT); kept separate
+    patterns: ['\bpet[- /]?ct\b', '\bspect[- /]?ct\b']
+  - id: cardiothoracic
+    why: here CT means cardiothoracic surgery
+    patterns: ['\bct ?vs\b', '\bct (?:surgery|surgeon|surgeons|icu)\b', '\bcardio[- ]?thoracic\b']
+  - id: optical_coherence
+    why: optical coherence tomography is an eye test
+    patterns: ['\boptical coherence tomography\b', '\boct\b']
+
+prerequisites:
+  - {id: radiology, kind: specialty, key: false, patterns: ['\bradiology (?:department|dept\.?|services?)\b', '\bradiologists?\b'],
+     taxonomy: ['^(?:diagnostic|interventional|pediatric)?[rR]adiology$', '^neuroradiology$']}
+  - {id: imaging_centre, kind: service, key: false, patterns: ['\b(?:imaging|diagnostic|scan) (?:centre|center|department)\b']}
+key_groups: []        # no prerequisite-only path: the scanner must be stated
+
+examples:
+  - {text: "128-slice CT scanner", match: exact}
+  - {text: "CT scan available 24x7", match: exact}
+  - {text: "HRCT chest", match: child}
+  - {text: "CBCT for dental implants", match: confusable}
+  - {text: "PET-CT", match: confusable}
+  - {text: "CTVS department", match: confusable}
+  - {text: "Consultant radiologist", match: prerequisite}

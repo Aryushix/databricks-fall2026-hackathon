@@ -1,0 +1,80 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format).
+# A service, not a procedure: "does this facility run an emergency department / casualty?".
+# Examples are SYNTHETIC.
+
+concept_id: emergency_department
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Emergency department
+category: emergency
+specialization: intermediate
+plausible_facility_types: [hospital]      # conservative: patients are routed here in emergencies
+
+codes:
+  mesh:
+    - {id: D004636, name: "Emergency Service, Hospital"}
+
+synonyms:
+  - '\bemergency (?:department|dept\.?|ward|room|unit|services?|care(?: unit| centre| center)?|wing|block|facility|facilities)\b'
+  - '\baccident (?:&|and) emergency\b'
+  - '\b(?:emergency|trauma) (?:&|and) (?:trauma|emergency)(?: care| department| centre| center| services?| unit)?\b'
+
+children:
+  - id: casualty                         # Indian hospitals often call the emergency department "casualty"
+    specificity: 0.9
+    patterns: ['\bcasualty(?: department| dept\.?| ward| services?| unit| block)?\b']
+  - id: emergency_24x7
+    patterns: ['\b(?:24\s*[x×*/]\s*7|24\s*hours?|24 hrs|round[- ]the[- ]clock|24/7)\s+(?:\S+\s+){0,3}?emergenc(?:y|ies)\b(?! (?:contact|number|no\b|helpline|call|phone))',
+               '\bemergenc(?:y|ies)\s+(?:\S+\s+){0,3}?(?:24\s*[x×*/]\s*7|24\s*hours?|24 hrs|round[- ]the[- ]clock|24/7)']
+  - id: emergency_medicine_department
+    specificity: 0.85
+    patterns: ['\bdepartment of emergency medicine\b', '\bemergency medicine (?:department|dept\.?|unit|services?)\b']
+  - id: pediatric_emergency
+    patterns: ['\b(?:pa?ediatric|children''?s) emergency\b']
+
+ambiguous: []
+
+confusables:
+  - id: emergency_contact_line
+    why: a phone number or advice line, not a department
+    patterns: ['\bemergency (?:contact|number|no\.?|nos\.?|helpline|phone|mobile|call|calls)\b', '\bin case of (?:an? )?emergenc(?:y|ies)\b',
+               '\bfor (?:any )?emergenc(?:y|ies)[,:]? (?:please )?(?:call|contact|dial)\b']
+  - id: other_specialty_emergency
+    why: a single specialty's urgent care, not a general emergency department
+    patterns: ['\b(?:dental|eye|ocular|ophthalmic|veterinary|vet|psychiatric|obstetric|ent|cardiac|neuro|stroke|small animal|animal|pet) emergenc(?:y|ies)\b',
+               '\bemergency (?:obstetric|dental|eye|ophthalmic|ent|cardiac|neuro\w*|veterinary|psychiatric)\b',
+               '\bemoc\b']
+  - id: emergency_home_care
+    why: home visits for bedridden patients, not a department patients can go to
+    patterns: ['\bemergency home (?:care|visits?|services?|nursing)\b', '\bhome (?:care|visits?|nursing) (?:\S+ ){0,2}emergenc(?:y|ies)\b']
+  - id: public_emergency_number
+    why: a public emergency number or generic advice, not a hospital service
+    patterns: ['\b(?:911|999)\b(?: \S+){0,2} emergency services?\b', '\bemergency information\b']
+  - id: emergency_non_service
+    why: building or equipment features, transport, contraception, training
+    patterns: ['\bemergency (?:exit|lighting|lights|power|backup|generator|drill|preparedness|response team|contraception|pill|ambulances?|transport|transfers?|evacuation)\b',
+               '\bemergency medical technicians?\b', '\bemergency (?:medicine )?(?:residency|fellowship|course|training)\b']
+
+prerequisites:
+  - {id: emergency_medicine_specialty, kind: specialty, key: false, taxonomy: ['^emergencyMedicine$', '^pediatricEmergencyMedicine$']}
+  - {id: ambulance, kind: service, key: false, patterns: ['\bambulances?\b', '\b(?:108|102) (?:services?|ambulance)\b']}
+  - {id: triage, kind: service, key: false, patterns: ['\btriage\b']}
+  - {id: emergency_physician, kind: staff, key: false,
+     patterns: ['\bemergency (?:physicians?|doctors?|medical officers?|specialists?)\b', '\bcasualty medical officers?\b', '\bcmo on duty\b']}
+  - {id: resuscitation, kind: equipment, key: false, patterns: ['\bresuscitation (?:room|bay|area)\b', '\bdefibrillators?\b']}
+key_groups: []        # no prerequisite-only path: an emergency department must be stated
+
+examples:
+  - {text: "24x7 Emergency Department", match: exact}
+  - {text: "Casualty", match: child}
+  - {text: "Round the clock emergency services", match: child}
+  - {text: "Emergency number: call the front desk", match: confusable}
+  - {text: "Dental emergency appointments", match: confusable}
+  - {text: "24x7 emergency home care for bedridden patients", match: confusable}
+  - {text: "24/7 emergency ophthalmic care", match: confusable}
+  - {text: "Small animal emergency care", match: confusable}
+  - {text: "24x7 emergency ambulance service", match: confusable}
+  - {text: "Ambulance service", match: prerequisite}
