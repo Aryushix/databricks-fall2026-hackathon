@@ -19,6 +19,9 @@ jobs:
         run: ruff check .
       - name: Syntax check
         run: python -m compileall -q src app notebooks tools tests
+      - name: Crawler test dependencies
+        # without these, tests/test_crawler.py skips itself and a broken crawler passes CI
+        run: pip install httpx beautifulsoup4
       - name: Cleaning tests
         run: pytest -q
       - name: No data files committed

@@ -84,6 +84,8 @@ def test_extract_uses_mailto_cloudflare_and_text():
         ("Netaji Subhas Medical College & Hospital", "nsmch.com", True),   # initials
         ("Holy Family Hospital, Jaipur", "cblmhfh.com", True),              # initials
         ("Hero DMC Heart Institute", "dmch.edu", True),
+        ("King Edward Memorial Hospital", "kem.edu", True),                # initials without "Hospital"
+        ("Guru Nanak Dev Hospital", "gndsshospital.org", True),
         # real mismatches from the first crawl: the facility is listed with another site
         ("Ayesha Clinic", "jehangirhospital.com", False),
         ("Pooja Hospital", "poonahospital.org", False),
