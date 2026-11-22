@@ -1,7 +1,11 @@
-"""FastAPI service: POST /recommend-hospitals, GET /health.
+"""FastAPI service: POST /recommend-hospitals, GET /resolve-location, GET /health.
 
 Run locally:  PYTHONPATH=src uvicorn hackathon.navigation.api:app --port 8000
 Data paths come from NAV_DATA_DIR (default ~/hackathon-data) or the NAV_* variables in store.py.
+
+GET /resolve-location?q=Gaya (optional &state=Bihar) turns a typed town, district or PIN code into the
+latitude/longitude that /recommend-hospitals needs. A name in several states comes back "ambiguous" with the
+states to choose from. Neither endpoint stores or logs what was typed.
 
 Invalid input returns 422. Even then, if the body carries a patient_message that trips a red flag,
 the 422 body includes the emergency block: a validation error must never hide an emergency.
@@ -13,19 +17,26 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Callable, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .contract import RecommendRequest, RecommendResponse
+from .contract import LocationResolution, RecommendRequest, RecommendResponse
 from .service import Navigator, build_navigator, emergency_block
 
 log = logging.getLogger("hackathon.navigation.api")
 
 
 def create_app(navigator: Optional[Navigator] = None,
-               factory: Optional[Callable[[], Navigator]] = None) -> FastAPI:
-    holder: dict = {"nav": navigator}
+               factory: Optional[Callable[[], Navigator]] = None,
+               resolver=None) -> FastAPI:
+    holder: dict = {"nav": navigator, "resolver": resolver}
+
+    def locator():
+        if holder["resolver"] is None:
+            from .locate import default_resolver
+            holder["resolver"] = default_resolver()
+        return holder["resolver"]
 
     def nav() -> Navigator:
         if holder["nav"] is None:
@@ -61,6 +72,11 @@ def create_app(navigator: Optional[Navigator] = None,
     @app.post("/recommend-hospitals", response_model=RecommendResponse)
     def recommend_hospitals(req: RecommendRequest) -> RecommendResponse:
         return nav().recommend(req)
+
+    @app.get("/resolve-location", response_model=LocationResolution)
+    def resolve_location(q: str = Query(min_length=1, max_length=200, description="Town, district or PIN code"),
+                         state: Optional[str] = Query(None, max_length=60)) -> LocationResolution:
+        return locator().resolve(q, state)
 
     @app.get("/health")
     def health() -> dict:

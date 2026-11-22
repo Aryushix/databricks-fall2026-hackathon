@@ -171,3 +171,22 @@ class RecommendResponse(_Model):
     degraded: bool = False
     degraded_reasons: list[str] = []
     versions: Versions = Versions()
+
+
+class LocationCandidate(_Model):
+    place: str
+    state: str
+
+
+class LocationResolution(_Model):
+    """What a typed place or PIN resolved to. Nothing typed is stored; the point is only used for distances."""
+    status: Literal["found", "ambiguous", "not_found"]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    label: Optional[str] = None
+    # pin: a PIN's post offices; place: a town or district name; place_approx: a close spelling or a longer name
+    method: Optional[Literal["pin", "place", "place_approx"]] = None
+    # median distance of the directory's post offices from the point: how precise the point is
+    spread_km: Optional[float] = None
+    candidates: list[LocationCandidate] = []
+    note: Optional[str] = None
