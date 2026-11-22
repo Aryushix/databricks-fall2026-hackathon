@@ -1,0 +1,31 @@
+/* Design tokens from care-finder-handoff/CLAUDE.md ("Visual tokens")
+   and design/Dashboard.dc.html. */
+:root {
+  --bg: #f6f3ec;
+  --surface: #ffffff;
+  --text: #1c1f1e;
+  --text-2: #3f4542;
+  --muted: #5a605d;
+  --border: #e4ded2;
+  --border-strong: #cfc8ba;
+
+  --accent: #0b6b53;
+  --accent-dark: #08513f;
+  --accent-tint: #e3f1eb;
+  --accent-soft: #d9eee5;
+
+  --emergency: #7a1f12;
+  --caution-text: #7a3a04;
+  --caution-bg: #fdefd9;
+  --hidden-border: #c9a574;
+  --hidden-bg: #fff9ee;
+
+  --map-bg: #e9e4d8;
+
+  --radius-card: 16px;
+  --radius-panel: 20px;
+  --radius-control: 12px;
+  --touch: 44px;
+
+  --font: "Inter", "Noto Sans Devanagari", "Noto Sans", system-ui, sans-serif;
+}
