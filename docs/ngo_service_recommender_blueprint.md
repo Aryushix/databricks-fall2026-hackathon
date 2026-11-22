@@ -1,8 +1,26 @@
-# NGO service recommender blueprint (proposal, not implemented)
+# NGO service recommender blueprint
 
-**Status, 2026-11-22 11:25 ET.** This branch holds a teammate's blueprint for review. None of it is built yet. It
-starts from `brian/demo-ready` (15 verified services, service + town/PIN search). Much of the blueprint already
-exists in other forms:
+## Implemented on this branch (2026-11-22, 11:25–12:00 ET)
+
+| Blueprint step | File | Notes |
+| --- | --- | --- |
+| 1. Service catalog | `configs/services.yaml` | 16 services with 4-pillar profiles, keyed by the care-need ids. `kb_id` set for the services with a verifier KB (NICU and MRI have one now) |
+| 1. Contracts | `navigation/contract.py` | `ServiceRecommendRequest` (radius up to 250 km, default 150), `MatchedClaim`, `FacilityServiceRecommendation` |
+| 2. Domain trust | `verification/domain_trust.py` | Own site or institutional domain 1.0, generic 0.6, shared by 3+ facilities 0.5, aggregator 0.45. An institutional domain shared by several facilities (a portal) drops to 0.5 |
+| 2. Claim verifier | `verification/claim_verifier.py`, `tools/verify_claims.py` | `claim_status`, `source_trust_score`, and a **verbatim** `corroboration_quote` for every claim. Own-website lines come from the verifier's crawler reader (`ledger.official_claims`) |
+| 2.3 Evidence table | `notebooks/02b_facility_evidence.py` | Writes `silver_facility_evidence_verified`. It uses the laptop file when uploaded; otherwise descriptions and copies only |
+| 3. Matcher | `navigation/matcher.py` | Path A (KB services): KB records only, scores never boosted. Path B (no KB): the 4-pillar formula, tier `SEMANTIC_MATCH`, labeled not verified. Token and Jaccard matching (no embeddings yet) |
+| 4. Ranking, warnings | `navigation/matcher.py` | Sort: tier, then confidence, then distance. Warnings: `coords_approximate`, `shared_phone`, `unverified_sources_only`, `not_verified` |
+| 5. UI | `app/pages/2_Service_finder.py` | Service, town/PIN or coordinates, radius slider, verification filter, evidence table with source trust. The existing Find care page is unchanged |
+| 6. Tests | `tests/test_ngo_service_recommender.py` | 13 tests: the 150 km boundary, CONFIRMED before a nearer LIKELY, the pillar path never CONFIRMED, aggregator below official, contradicted disqualifies |
+
+Not done: embedding similarity (`databricks-qwen3-embedding-0-6b`), the API endpoint for the matcher, and a
+clinician review of the requirement profiles.
+
+## Before implementation (11:25 ET)
+
+The branch started from `brian/demo-ready` (15 verified services, service + town/PIN search). Much of the blueprint
+already existed in other forms:
 
 | Blueprint step | What exists today | What's new |
 | --- | --- | --- |

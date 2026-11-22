@@ -218,3 +218,35 @@ class ServiceResponse(_Model):
     degraded: bool = False
     degraded_reasons: list[str] = []
     versions: Versions = Versions()
+
+
+# ---- NGO service finder (navigation/matcher.py, configs/services.yaml) --------------------------------
+class ServiceRecommendRequest(_Model):
+    service_id: str = Field(min_length=1, max_length=60)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    radius_km: float = Field(default=150.0, gt=0, le=250)
+    min_confidence: float = Field(default=0.5, ge=0, le=1)
+    max_results: int = Field(default=10, ge=1, le=50)
+
+
+class MatchedClaim(_Model):
+    pillar: Literal["equipment", "procedure", "specialty", "capability", "kb"]
+    claim_text: str
+    claim_status: str
+    source_trust_score: float
+    source_url: Optional[str] = None
+
+
+class FacilityServiceRecommendation(_Model):
+    hospital_id: str
+    hospital_name: Optional[str] = None
+    facility_type: Optional[str] = None
+    distance_km: float
+    overall_confidence: float
+    # CONFIRMED / LIKELY come from a verifier KB; SEMANTIC_MATCH is a claim match on the 4 pillars, not verified
+    verification_tier: Literal["CONFIRMED", "LIKELY", "SEMANTIC_MATCH", "UNVERIFIED"]
+    matched_claims: list[MatchedClaim] = []
+    corroborating_quotes: list[str] = []
+    official_phone: Optional[str] = None
+    warnings: list[str] = []

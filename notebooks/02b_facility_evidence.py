@@ -119,3 +119,36 @@ display(spark.sql(f"SELECT category, count(*) AS claims, count(DISTINCT facility
 # COMMAND ----------
 
 display(spark.table(EVIDENCE_TABLE).limit(20))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Claim status for every claim → `silver_facility_evidence_verified`
+# MAGIC `claim_status` (VERIFIED_OFFICIAL, CORROBORATED_BY_DESC, UNVERIFIED_LISTING, COPIED_LISTING, CONTRADICTED),
+# MAGIC `source_trust_score` and a verbatim `corroboration_quote` (`src/hackathon/verification/claim_verifier.py`).
+# MAGIC Checking claims against facilities' own websites needs the crawler cache, which lives on a laptop: run
+# MAGIC `tools/verify_claims.py` there and upload `evidence_verified.csv.gz` to the `raw` volume. Without that file,
+# MAGIC this cell checks descriptions and copies only, so no claim can be VERIFIED_OFFICIAL.
+
+# COMMAND ----------
+
+import pandas as pd
+
+from hackathon.verification.claim_verifier import ClaimVerifier, explode_claims
+
+VERIFIED_TABLE = cfg.table("silver_facility_evidence_verified")
+laptop_file = cfg.raw_path + "/evidence_verified.csv.gz"
+if os.path.exists(laptop_file):
+    claims_verified = pd.read_csv(laptop_file, dtype=str, keep_default_na=False)
+    print("Loaded", laptop_file)
+else:
+    fac = facilities.select("unique_id", "name", "description", "source_urls", "officialWebsite_domain",
+                            *[c for c in CLAIM_COLUMNS if c in facilities.columns]).toPandas()
+    for c in [*CLAIM_COLUMNS, "source_urls"]:
+        if c in fac.columns:
+            fac[c] = fac[c].map(lambda v: list(v) if v is not None else [])
+    claims_verified = ClaimVerifier(fac).verify(explode_claims(fac))
+    print("No laptop file: descriptions and copies only")
+spark.createDataFrame(claims_verified.astype(str)).write.mode("overwrite").option("overwriteSchema", "true") \
+    .saveAsTable(VERIFIED_TABLE)
+display(spark.sql(f"SELECT claim_status, count(*) AS claims FROM {VERIFIED_TABLE} GROUP BY 1 ORDER BY 2 DESC"))
