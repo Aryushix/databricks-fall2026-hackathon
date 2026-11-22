@@ -140,16 +140,28 @@ Every field is a claim extracted from web text, so coverage says what's present,
 
 - **Runs on a laptop.** Databricks Free Edition blocks most outbound web traffic.
 - **Polite:**
-  - follows each site's `robots.txt`, and skips a site whose `robots.txt` can't be reached (recorded as `robots_unreachable_<error>`; rerun with `--retry-failed` to try those sites again)
+  - follows each site's `robots.txt`, and skips a site whose `robots.txt` can't be reached (recorded as `robots_unreachable:<error>`, or `robots_server_error:<status>` for a 5xx; rerun with `--retry-failed` to try those sites again)
+  - has at most `--concurrency` sites in progress at once, `robots.txt` requests included
   - honours `Crawl-delay` and makes one request at a time per site
   - identifies itself with your contact address
   - fetches at most 4 pages per site, 2 MB each
 - **Skips aggregators.** Practo, JustDial and the other directory and social sites are not crawled; their terms usually forbid scraping.
 - **Resumable and auditable.** Every page and result is stored in a local SQLite cache, which stays out of Git.
+- **Bed counts** are the facility's current size only. Units ("a 10-bedded ICU"), history ("began in 1997 with 10 beds") and chain totals ("4,290 beds across 18 hospitals") are ignored.
+- **Emails** on the site's own domain come first, so a web developer's stray address isn't picked.
 - **Merge rules:**
   - fills **only empty fields** and never overwrites
   - records where each filled value came from in `crawl_filled_fields` and `crawl_sources`
-  - doesn't copy a website's email or phone onto a facility when 3+ facilities share that website (usually a chain's head office); those values go in `crawl_phones_found` instead
+  - copies nothing from a site it can't tie to the facility, and says why in `crawl_skip_reason`:
+
+    | Reason | Meaning |
+    | --- | --- |
+    | `shared_website` | 3+ facilities list that domain (`--chain-threshold`), usually a chain's head office |
+    | `name_mismatch` | The domain doesn't carry the facility's name: no distinctive word of it and not its initials (Ayesha Clinic listed with `jehangirhospital.com`). Generic names like "City Hospital" never match |
+    | `redirected_elsewhere` | The site now forwards to a domain that doesn't carry the name either |
+
+  - what was found for a skipped facility still goes in `crawl_phones_found` and `crawl_socials_found`
+- **Changed the extraction rules?** `reextract --db crawl.sqlite --out enrichment.csv` re-runs them on the cached pages with no network; use it in place of `export`.
 
 ```bash
 python tools/facility_crawler.py crawl  --input facilities_cleaned.csv --db crawl.sqlite --contact "you@andrew.cmu.edu" --limit 200
