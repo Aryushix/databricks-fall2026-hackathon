@@ -172,3 +172,13 @@ python tools/facility_crawler.py merge  --input facilities_cleaned.csv --enrichm
 Upload `facilities_enriched.csv` to the `raw` volume, then rerun `01_clean_facilities` (it loads the enriched file instead of cleaning the raw data) and `01b_verify_locations`.
 
 In a 50-site test on real websites, 38 sites returned data. The other 12 were mostly sites whose `robots.txt` forbids crawlers. Check a sample of the results before relying on them.
+
+**Full run, 2026-11-22.**
+- 5,213 of 8,060 sites crawled OK.
+- Of the 2,847 that didn't:
+  - 1,984: `robots.txt` couldn't be reached, mostly connection errors from dead or unreachable hosts;
+  - about 390: `DecodingError`, a body that didn't match its `Content-Encoding`. It hit 422 unrelated hosts, so it may be on our side;
+  - 315: HTTP errors;
+  - 133: `robots.txt` said no or returned a server error.
+- `merge` filled fields for 781 facilities: email 300, year established 306, bed count 230, official phone 45, Facebook link 29.
+- It left 1,028 facilities unfilled because it couldn't tie the site to them: 791 `name_mismatch`, 184 `shared_website`, 53 `redirected_elsewhere`.

@@ -66,10 +66,10 @@ guessed coordinates or phone numbers, or anything from model output beyond the s
 
 ## What it can verify today
 
-Only **hemodialysis** and **cardiac catheterization** have verifier KBs, so only those care needs can be a
-capability match. Every other need (emergency department, CT, ICU, trauma care, burn unit, NICU, general surgery, orthopedics,
-eye care…) shows "can't be verified for any facility yet" and its unverified signals, and the call-ahead
-list carries the answer. Adding a KB file under `src/hackathon/verification/kb/` and re-running the verifier
+Four care needs have verifier KBs, so only they can be a capability match: **hemodialysis**, **cardiac
+catheterization**, **emergency department** and **CT scan**. Every other need (ICU, trauma care, burn unit, NICU,
+general surgery, orthopedics, eye care…) shows "can't be verified for any facility yet" and its unverified
+signals, and the call-ahead list carries the answer. Adding a KB file under `src/hackathon/verification/kb/` and re-running the verifier
 turns the need on here with no code change. The recommended build order is in the design note, section 3.
 
 ## Run it
@@ -142,16 +142,20 @@ Reports (`report.md`, `metrics.json`, and with data `human_judgment.csv`, writte
 - **Coverage:** synthetic cases at sampled India Post offices that get a verified match within the radius.
 - **Human-judgment CSV:** top-5 results for 25 cases, with blank columns for two judges. It is the honest proxy for recommendation precision.
 
-First run on 2026-11-22 (rule extractor; 71 sampled locations, 2 per state):
+Run on 2026-11-22 with the finished crawl and all four KBs (rule extractor; 71 sampled locations, 2 per state):
 
 | Metric | Result |
 | --- | --- |
 | Red-flag recall | 150/150 |
 | Over-triage | 0/25 |
 | Urgency, extraction fields and care needs | All exact on the 30 labeled cases |
-| Capability consistency | 1.0 over 5,808 recommendations |
-| Verified dialysis match | 83% of locations within 100 km; 92% after widening |
-| Verified cath-lab match (chest pain) | 14% within 25 km; 30% listed at all after widening (nearest-first included) |
+| Capability consistency | 1.0 over 7,451 recommendations |
+| Verified dialysis match (3 routine cases) | 83% of locations within 100 km; 92% after widening to 150 km |
+| Verified match in emergencies (12 cases; mostly the emergency department) | 49% of locations within 25 km; 89–90% after widening to 50 km |
+| Verified match for severe abdominal pain (3 urgent cases) | 68% of locations within 50 km; 92% after widening to 100 km |
+
+The earlier run, before the crawl finished and with only the dialysis and cath KBs, found a verified cath-lab match
+for chest pain at 14% of locations within 25 km.
 
 The cases and phrasings were written alongside the rules, so the extraction and triage numbers are optimistic. A
 held-out set written by someone else, and the human judgments, are the real test. **All of these measure

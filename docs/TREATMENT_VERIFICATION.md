@@ -154,6 +154,20 @@ Before committing, every CONFIRMED record and a sample of LIKELY records were re
 
 The rule classifier also learned "via an outside …" as outsourcing. That change is `rules_v2`, so cached `rules_v1` labels aren't reused. Cardiac catheterization and hemodialysis counts are unchanged.
 
+**Finished crawl, 2026-11-22.** The crawler was re-run on every site: 5,213 of 8,060 crawled OK (393 before), and
+the verifier now has official pages for 5,222 facilities (543 of those sites don't name the facility; 130 domains
+are chains). Same rules (`rules_v2`), same 9,989 facilities, run `240517db1f17`. Counts, not accuracy:
+
+| Treatment | CONFIRMED | LIKELY | NOT CONFIRMED | UNVERIFIED | CONTRADICTED | Flagged for review |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Cardiac catheterization | 88 | 331 | 600 | 8,970 | 0 | 543 |
+| Hemodialysis | 472 | 708 | 172 | 8,637 | 0 | 1,141 |
+| Emergency department | 995 | 1,880 | 1,093 | 6,014 | 7 | 2,935 |
+| CT scan | 362 | 1,048 | 949 | 7,621 | 9 | 1,451 |
+
+Unlike the earlier runs, the 1,049 records that became CONFIRMED with the new pages haven't all been read. A random
+40 of them showed four patterns the rules don't handle yet (`docs/verification_benchmark_design.md`, §1.2).
+
 ## Tests
 
 `pytest` runs `tests/test_verification_components.py` (KB, ledger, every assertion type, model-output
@@ -182,8 +196,10 @@ about 73 labeled CONFIRMED pairs with no errors, or 142 with at most 2.
 
 - **Extracted claims have no page.** `source_urls` is one list per facility, so an extracted claim's source
   is `extracted_record`, never upgraded by guessing. Extracted fields alone can reach LIKELY at most.
-- **Official evidence is scarce.** The crawler cached pages for 446 facilities; 91 of those sites don't
-  name the facility. CONFIRMED is out of reach for the rest until the crawler is re-run.
+- **Official evidence covers about half the facilities.** The finished crawl cached pages for 5,222 of
+  9,989 facilities; 543 of those sites don't name the facility. The rest have no website in the data, or
+  their site couldn't be crawled (about 2,850 sites, mostly unreachable; about 390 failed on response
+  decoding, which may be fixable on our side). Without an official page a facility can't reach CONFIRMED.
 - **Quotes are the extractor's words.** The substring check stops a model inventing quotes; it can't catch
   an extraction that misread the page. Official-page quotes are the page's own text.
 - **The rule pass is a cue list.** It misses paraphrases and can misfire (tests pin the known cases).

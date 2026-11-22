@@ -614,13 +614,14 @@ adjudication sheet puts disagreements side by side.
 
 ## 10. Navigation tie-in
 
-**Current state.** `human_judgment.csv` from `tools/eval_navigation.py` has 74 rows:
+**Current state.** `human_judgment.csv` from `tools/eval_navigation.py`, re-run on run `240517db1f17` with all
+four KBs, has 87 rows for 25 cases:
 - none is judged yet;
-- it was built before the ED and CT KBs existed;
-- only 8 rows carry a verified match, all hemodialysis.
+- 44 rows carry a verified match: emergency department 36 (17 CONFIRMED, 19 LIKELY), hemodialysis 8 (5 / 3) and
+  CT 6 (2 / 4). A row can match more than one KB.
 
 **Plan.**
-1. Once the records are frozen, re-run the navigation evaluation on them. It last ran on the earlier crawl.
+1. Once the records are frozen, re-run the navigation evaluation on them if they differ from `240517db1f17`.
 2. Put the (hospital, KB) pairs behind verified matches into the gold sample as a certainty stratum (π = 1,
    capped at 40).
 3. Once both sheets are judged, join on (`hospital_id`, `kb_id`): navigation judgment (appropriate y/n) ×
