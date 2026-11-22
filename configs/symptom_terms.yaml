@@ -1,0 +1,122 @@
+# Reviewed synonym table for symptom extraction (src/hackathon/navigation/extract.py).
+# DRAFT: needs review, including by a Hindi speaker for the romanized-Hindi and Devanagari terms.
+#
+# Both extractors only ever output the canonical ids below. The rule extractor matches these
+# patterns; the model is constrained to the same ids by a JSON schema. Patterns are Python regexes,
+# matched case-insensitively on the normalised message. Negated mentions ("no fever") are skipped
+# with the red-flag screen's negation logic.
+
+terms_version: "0.1.0"
+review_status: draft
+
+body_locations:
+  head: ['\b(?:head|headache|head\s*ache|migraine|sir|sar|sirdard|sardard|forehead)\b', 'सिर']
+  face: ['\b(?:face|cheek|chehra|chehre)\b', 'चेहरा']
+  eye: ['\b(?:eye|eyes|vision|eyesight|sight|blurry|blurred|blurr\w*|aankh|ankh|aankhon|nazar|dikhai)\b', 'आंख|आँख|नज़र']
+  ear: ['\b(?:ear|ears|earache|kaan)\b', 'कान']
+  nose: ['\b(?:nose|nasal|sinus\w*|naak)\b', 'नाक']
+  throat: ['\b(?:throat|tonsil\w*|gala|gale)\b', 'गला|गले']
+  teeth: ['\b(?:tooth|teeth|toothache|tooth\s*ache|gum|gums|dental|molar|daant|dant|daanth|masoodha|masude)\b', 'दांत|दाँत|मसूड़\w*']
+  neck: ['\b(?:neck|gardan)\b', 'गर्दन']
+  chest: ['\b(?:chest|seena|seene|chhati|chati)\b', 'सीने|सीना|छाती']
+  back: ['\b(?:back|backache|spine|kamar|peeth)\b', 'कमर|पीठ']
+  abdomen: ['\b(?:stomach|belly|abdomen|abdominal|tummy|gut|navel|pet|pait)\b', 'पेट']
+  pelvis: ['\b(?:pelvis|pelvic|groin)\b']
+  arm: ['\b(?:arm|arms|elbow|wrist|hand|hands|finger\w*|baju|haath)\b', 'हाथ|बांह']
+  shoulder: ['\b(?:shoulder\w*|kandha|kandhe)\b', 'कंधा|कंधे']
+  leg: ['\b(?:leg|legs|thigh|calf|foot|feet|toe|toes|ankle\w*|pair|pairon|tang|taang)\b', 'पैर|टांग']
+  knee: ['\b(?:knee|knees|ghutna|ghutne|ghutnon)\b', 'घुटन\w*|घुटने']
+  hip: ['\b(?:hip|hips|kulha|kulhe)\b', 'कूल्हा|कूल्हे']
+  joint: ['\b(?:joint|joints|jodo|jodon|arthritis)\b', 'जोड़\w*']
+  skin: ['\b(?:skin|rash|rashes|itch\w*|khujli|daane|eczema|acne)\b', 'खुजली|त्वचा']
+  urinary: ['\b(?:urine|urinat\w*|pee|peeing|bladder|peshab|pishab)\b', 'पेशाब']
+  kidney: ['\b(?:kidney|kidneys|renal|gurda|gurde)\b', 'गुर्द\w*|किडनी']
+
+# Abdomen sub-regions: when one of these also matches, it replaces plain "abdomen".
+abdomen_regions:
+  abdomen_lower_right: ['\b(?:lower|bottom)\s+right\b', '\bright\s+(?:lower|side\s+of\s+(?:the\s+|my\s+)?(?:lower\s+)?(?:abdomen|belly|stomach))\b', '\bright\s+iliac\b']
+  abdomen_lower_left: ['\b(?:lower|bottom)\s+left\b', '\bleft\s+lower\b']
+  abdomen_upper_right: ['\bupper\s+right\b', '\bright\s+upper\b']
+  abdomen_upper_left: ['\bupper\s+left\b', '\bleft\s+upper\b']
+  abdomen_upper: ['\bupper\s+(?:abdomen|belly|stomach)\b', '\bepigastr\w*']
+  abdomen_lower: ['\blower\s+(?:abdomen|belly|stomach|tummy)\b', '\bneeche\s+pet\b']
+
+severity:
+  severe: ['\b(?:severe|severely|very\s+bad|really\s+bad|terrible|horrible|unbearable|excruciating|intense|extreme|worst|killing\s+me|bahut|bohot|bahot|tez|tej|asahniya|can''?t\s+bear)\b', 'बहुत|तेज़|तेज|असहनीय']
+  moderate: ['\b(?:moderate|quite\s+bad|fairly\s+bad|kaafi|kafi|bad)\b', 'काफी']
+  mild: ['\b(?:mild|slight|slightly|little|a\s+bit|minor|halka|halki|thoda|thodi|light)\b', 'हल्का|हल्की|थोड़ा']
+
+onset:
+  sudden: ['\b(?:sudden|suddenly|all\s+of\s+a\s+sudden|out\s+of\s+nowhere|just\s+now|achanak|ekdum)\b', 'अचानक']
+  gradual: ['\b(?:gradual|gradually|slowly|over\s+(?:the\s+)?(?:past|last)|for\s+(?:months|years|weeks)|getting\s+worse\s+over|dheere|dhire)\b', 'धीरे']
+
+duration:
+  - pattern: '\b(?:for|since|past|last|from)\s+(?:the\s+)?(?:past\s+|last\s+)?(\d+|a|an|one|two|three|four|five|six|seven|few|several|many)\s+(minute|hour|day|week|month|year)s?\b'
+    template: "{1} {2}s"
+  - pattern: '\b(\d+|ek|do|teen|char|paanch)\s*(ghante|ghanta|din|hafte|hafta|mahine|mahina|saal)\s*(?:se|ho\s+gaye|ho\s+gaya)\b'
+    template: "{1} {2}"
+  - pattern: '\bsince\s+(yesterday|last\s+night|this\s+morning|morning|last\s+week|last\s+month|last\s+year|birth|childhood)\b'
+    template: "since {1}"
+  - pattern: '\b(kal|parso)\s+se\b'
+    template: "since {1}"
+  - pattern: '\bfor\s+(months|years|weeks|days|ages|a\s+long\s+time)\b'
+    template: "{1}"
+  - pattern: '\bover\s+the\s+(?:past|last)\s+((?:\d+|few|several)\s+)?(day|week|month|year)s?\b'
+    template: "past {2}"
+
+pain_type:
+  sharp: ['\b(?:sharp|stabbing|shooting|chubhan|chubh\w*)\b']
+  dull: ['\b(?:dull|aching|ache|heavy)\b']
+  burning: ['\bburning\s+(?:pain|sensation|feeling)\b', '\bjalan\b', 'जलन']
+  throbbing: ['\b(?:throbbing|pulsing|pounding)\b']
+  cramping: ['\b(?:cramp\w*|colic\w*|marod\w*|ainthan)\b']
+  pressure: ['\b(?:pressure|tightness|squeezing|crushing)\b']
+
+associated_symptoms:
+  fever: ['\b(?:fever|feverish|temperature|bukhar|bukhaar|taap)\b', 'बुखार']
+  vomiting: ['\b(?:vomit\w*|throwing\s+up|threw\s+up|ulti|ultiyan)\b', 'उल्टी']
+  nausea: ['\b(?:nausea|nauseous|queasy|ji\s+machal\w*)\b']
+  diarrhoea: ['\b(?:diarrh\w*|loose\s+motion\w*|dast|loose\s+stool\w*)\b', 'दस्त']
+  cough: ['\b(?:cough\w*|khansi|khaansi)\b', 'खांसी|खाँसी']
+  dizziness: ['\b(?:dizz\w*|giddy|lightheaded|light-headed|chakkar)\b', 'चक्कर']
+  sweating: ['\b(?:sweat\w*|pasina|paseena)\b', 'पसीना']
+  breathlessness: ['\b(?:breathless\w*|short(?:ness)?\s+of\s+breath|saans\s+phool\w*)\b']
+  bleeding: ['\b(?:bleed\w*|blood|khoon|khun)\b', 'खून']
+  swelling: ['\b(?:swell\w*|swollen|sooj\w*|sujan)\b', 'सूजन']
+  numbness: ['\b(?:numb\w*|tingl\w*|sunn|jhunjhuni)\b']
+  rash: ['\b(?:rash\w*|hives|daane)\b']
+  fatigue: ['\b(?:tired|fatigue\w*|exhaust\w*|weak|weakness|thakan|kamzori)\b', 'थकान|कमज़ोरी|कमजोरी']
+  blurred_vision: ['\b(?:blurr?\w*\s+vision|vision\s+(?:\S+\s+){0,3}?blurr?\w*|blurry|dhundhla)\b', 'धुंधला']
+
+special_context:
+  pregnancy: ['\b(?:pregnan\w*|pregnent|garbh\w*|expecting\s+a\s+baby|pet\s+se\s+(?:hoon|hu|hai|hain))\b', 'गर्भ\w*']
+  infant_child: ['\b(?:baby|infant|newborn|toddler|child|kid|my\s+son|my\s+daughter|bachcha|bachchi|bacha|bachi|shishu|\d+\s*(?:month|year)s?\s*old\s+(?:son|daughter|boy|girl|child))\b', 'बच्च\w*|शिशु|नवजात']
+  older_adult: ['\b(?:elderly|old\s+(?:man|woman|father|mother)|grand(?:father|mother|pa|ma)|dada|dadi|nana|nani|(?:6[5-9]|[7-9]\d)\s*(?:years?|yrs?|saal)\b)']
+  on_dialysis: ['\b(?:dialysis|dialisis|dialysys|haemodialysis|hemodialysis)\b', 'डायलिसिस']
+  diabetes: ['\b(?:diabet\w*|sugar\s+(?:patient|problem|hai|ki\s+bimari))\b', 'शुगर|मधुमेह']
+  heart_condition: ['\b(?:heart\s+patient|heart\s+problem|had\s+a\s+heart\s+attack|stent|bypass\s+surgery)\b']
+  kidney_disease: ['\b(?:kidney\s+(?:failure|disease|problem)|kidneys?\s+(?:have\s+|has\s+)?fail\w*|ckd|renal\s+failure)\b']
+
+languages:
+  # Latin-script messages with at least two of these words are treated as romanized Hindi/Hinglish.
+  hinglish_markers: ['hai', 'hain', 'mein', 'me', 'nahi', 'nahin', 'bahut', 'dard', 'raha', 'rahi', 'ho', 'kya', 'mujhe', 'mera', 'meri', 'mere', 'ka', 'ki', 'ke', 'aur', 'se', 'pet', 'sir', 'gaya', 'gayi', 'hoon', 'hu', 'kal', 'aaj']
+  # Scripts the screen can't read: a message in one of these is "unclear" with the emergency line.
+  unsupported_scripts:
+    bengali: '[ঀ-৿]'
+    gurmukhi: '[਀-੿]'
+    gujarati: '[઀-૿]'
+    odia: '[଀-୿]'
+    tamil: '[஀-௿]'
+    telugu: '[ఀ-౿]'
+    kannada: '[ಀ-೿]'
+    malayalam: '[ഀ-ൿ]'
+    arabic_urdu: '[؀-ۿ]'
+
+# Questions worth asking when a body location is mentioned but these details aren't.
+missing_by_location:
+  abdomen: [duration, fever, vomiting, pregnancy]
+  chest: [duration, breathlessness, sweating]
+  head: [duration, onset, vision_change, weakness]
+  knee: [duration, swelling, injury]
+  eye: [duration, pain, injury]
+  teeth: [duration, swelling, fever]

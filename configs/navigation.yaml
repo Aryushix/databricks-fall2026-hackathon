@@ -1,0 +1,126 @@
+# Symptom navigation settings (src/hackathon/navigation). Every value here is a policy choice;
+# docs/symptom_navigation_design.md explains where each number came from.
+
+navigation_version: "0.1.0"
+
+disclaimer: "This tool helps find facilities; it does not give medical advice. If this may be an emergency, call 112."
+
+# Emergency contacts. Shown from here only, never from model output. Each carries its source.
+contacts:
+  emergency:
+    label: "Emergency: police, fire, ambulance"
+    number: "112"
+    source_url: "https://112.gov.in/about"
+  ambulance:
+    label: "Ambulance (most states)"
+    number: "108"
+    note: "108 is being integrated into 112."
+    source_url: "https://112.gov.in/about"
+  tele_manas:
+    label: "Tele-MANAS mental-health helpline (free, 24x7, many languages)"
+    number: "14416"
+    alt_number: "1-800-891-4416"
+    source_url: "https://dghs.mohfw.gov.in/national-mental-health-programme.php"
+
+messages:
+  emergency_generic: "This may be an emergency. Call 112 now, or 108 for an ambulance."
+  transport_advice: "Don't drive yourself. Call 108 or 112 for an ambulance, or ask someone to take you."
+  crisis: >-
+    You don't have to go through this alone. If you might act on these thoughts, or have already taken
+    something, call 112 now. You can also talk to someone at Tele-MANAS: call 14416. It's free, 24x7,
+    and you can choose your language.
+  screen_failed: "We couldn't check your message for warning signs. If this may be an emergency, call 112 now."
+  # Symptom-level lines per red-flag category. They describe what was said, never a condition.
+  category:
+    possible_heart_attack: "Chest pain or pressure, or pain spreading to the arm or jaw, needs emergency care now."
+    possible_stroke: "Sudden weakness on one side, a drooping face, trouble speaking or a sudden severe headache needs emergency care now."
+    breathing_difficulty: "Serious trouble breathing needs emergency care now."
+    major_trauma_bleeding: "A serious injury, or bleeding that won't stop, needs emergency care now."
+    burns: "A large, facial, electrical or chemical burn needs emergency care now."
+    pregnancy_emergency: "Bleeding, severe pain, fits or fainting in pregnancy need emergency care now."
+    newborn_child_emergency: "A baby or child who is not feeding, very sleepy or floppy, breathing fast or having fits needs emergency care now."
+    unconscious_seizure: "Someone who is unconscious or having fits needs emergency care now."
+    poisoning_overdose_bites: "Poisoning, an overdose, or a snake or animal bite needs emergency care now."
+    severe_allergic_reaction: "Swelling of the face, lips or throat, or trouble breathing after food, medicine or a sting, needs emergency care now."
+    severe_abdominal_pain: "Severe belly pain with fainting, vomiting blood, a hard belly or pregnancy needs emergency care now."
+    self_harm: "Thoughts of ending your life or hurting yourself need help now."
+  triage_reason:
+    emergency: "Warning signs in the message need emergency care."
+    urgent: "This should be checked in person today."
+    routine: "This can be planned with a facility near you."
+    unclear: "We need a little more information to suggest the right kind of facility."
+  triage_advice:
+    emergency: "Don't drive yourself. Call 108 or 112 for an ambulance, or ask someone to take you."
+    urgent: "Go to a hospital today. If the pain is severe, arrange transport rather than driving yourself. Call 112 if it gets worse."
+    routine: "Call ahead to check the service is available before you travel."
+    unclear: "If this may be an emergency, call 112."
+
+llm:
+  enabled: true                 # set false to always use the rule extractor
+  timeout_seconds: 8            # Free Edition quota and cold starts make timeouts normal: fall back, don't wait
+  max_tokens: 500
+  temperature: 0.0
+  cache_patient_text: false     # patient text is never cached unless this is turned on (privacy)
+
+extraction:
+  unsupported_scripts_unclear: true   # a script the screen can't read -> urgency unclear, emergency line shown
+
+search:
+  # Straight-line search radius by urgency, then one widening if nothing qualifies (design note s.5).
+  radius_km: {emergency: 25, urgent: 50, routine: 100}
+  widen_to_km: {emergency: 50, urgent: 100, routine: 150}
+  # Confidence bands on heuristic_v1 (an ordering, not a probability). Narrower bands in emergencies:
+  # verification strength decides more often before distance does. Wider in routine: distance decides.
+  band_edges: {emergency: [0.65, 0.80], urgent: [0.65, 0.80], routine: [0.80]}
+  max_results_default: 5
+  # Emergencies (Brian, 2026-11-22: getting the patient a result comes first): the nearest hospitals are
+  # listed first, with any verified match they have, then verified matches further away. Set false for
+  # the brief's order (verified matches first, nearest after).
+  emergency_nearest_first: true
+  # Emergencies always get a result: if nothing is within the widened radius, show the nearest hospitals
+  # in our data at whatever distance, and say how far.
+  emergency_always_result: true
+  # ...up to this far. Beyond it a listed hospital would mislead (the Andaman Islands' nearest in our data is
+  # 1,163 km away on the mainland): the emergency block (call 112) is the answer, and the note says so.
+  emergency_always_result_max_km: 300
+  fallback:
+    max: 3                       # "nearby facilities, capability not verified: call ahead"
+    always_for: [emergency]      # otherwise only when verified matches < max_results
+
+coverage:
+  # Resolved facility coordinates span lat 8.17-34.40, lon 69.36-95.44; padded by 0.5 degrees.
+  bbox: {lat_min: 7.66, lat_max: 34.90, lon_min: 68.86, lon_max: 95.94}
+
+status_policy:
+  eligible: [CONFIRMED, LIKELY]
+  tier: {CONFIRMED: 1, LIKELY: 2}
+  never_show: [CONTRADICTED]
+
+warnings:
+  status:
+    LIKELY: "{need} is likely, not confirmed."
+  reason_codes:
+    DIRECT_SINGLE_ORIGIN: "Only one source describes this service."
+    PREREQS_MET: "Based on related equipment and staff listed, not a direct statement of the service."
+    CHAIN_SITE_ONLY: "The source is a hospital group's website, not this branch's."
+    PARTNER_ON_SITE: "Provided by a partner or visiting specialist on site."
+    IMPLAUSIBLE_FACILITY_TYPE: "This type of facility doesn't usually provide this service."
+    STALE: "The supporting information may be out of date."
+    CONFLICT_UNRESOLVED: "Sources disagree about this service."
+  review_reasons:              # matched by prefix on the verifier's review_reasons
+    "the only direct evidence is an extracted claim": "The source page for this listing is unknown."
+    "facility identity is uncertain": "This listing may mix up two facilities."
+    "highly specialized treatment": "Specialized service: confirm by phone before travelling."
+    "CONFIRMED without every key prerequisite": "Some equipment or staff for this service isn't documented."
+    "a claim in this record is about a different facility": "Part of this listing describes another facility."
+    "evidence points to a partner": "Provided by a partner or visiting specialist on site."
+    "eligible for CONFIRMED but the score": "Close to confirmed, but not quite."
+  location_status:
+    partly_verified: "One of the address fields didn't check out; confirm the address."
+    conflicting: "The address fields point to different places; confirm the location before travelling."
+    unverified: "The location couldn't be checked; confirm the address."
+  approximate_location: "This facility's position is approximate (its PIN area), so the distance may be off."
+  draft_kb: "The rules for checking {need} are still a draft."
+  fallback: "Capability not verified: call ahead."
+  listed_phone: "Number from the facility listing, not verified by us."
+  no_kb: "{need} can't be verified for any facility yet."

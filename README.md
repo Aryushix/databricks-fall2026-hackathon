@@ -84,14 +84,17 @@ src/hackathon/
   facility_silver.py             Notebook 01's helpers: pick the source, write typed tables
   location_check.py              Location checks against India Post (used by notebook 01b and tools/)
   verification/                  Does a facility provide a treatment? Evidence, status, confidence
+  navigation/                    Symptoms + location -> safety advice and verified nearby facilities
   rag.py                         Chatbot logic, shared by notebook 06 and the app
 tools/
   clean_dataset.py               Same cleaning on a laptop: dataset.csv → facilities_cleaned.csv
   facility_crawler.py            Optional, laptop only: fill missing contacts/years from facility websites
   verify_locations.py            Same location checks on a laptop, on a CSV
   verify_treatments.py           Treatment verification on a laptop, on a CSV
+  eval_navigation.py             Evaluate symptom navigation (synthetic cases; optional real data)
 tests/                           Tests for the cleaning and location rules (made-up rows, no real data)
 app/app.py, app.yaml             Optional: demo chat app (Databricks Apps)
+app/pages/1_Find_care.py         Find care: describe symptoms, share a location, see verified facilities
 eval/questions.jsonl             Optional: test questions for notebook 06
 data/README.md                   Where the data lives and where it came from (no data in Git)
 sql/load_data_sql_editor.sql     Backup: load the data from the SQL Editor if notebooks won't start
@@ -99,7 +102,9 @@ docs/CHALLENGE.md                The datathon brief and our submission checklist
 docs/DATA_CLEANING.md            Every cleaning rule and data-quality flag, with counts
 docs/LOCATION_CHECKS.md          How each location is checked against India Post, with results
 docs/TREATMENT_VERIFICATION.md   How treatment claims are verified, and how to run it
+docs/SYMPTOM_NAVIGATION.md       Symptom navigation: how it decides, how to run, deploy and evaluate it
 configs/verification.yaml        Thresholds, weights and source reliability for treatment verification
+configs/red_flags.yaml, care_needs.yaml, symptom_terms.yaml, navigation.yaml   Symptom navigation rules (draft)
 docs/databricks-tutorial.md      Our Databricks tutorial: cleaning, AI Functions, RAG, evaluation
 .github/                         Automatic code check on every pull request
 ```

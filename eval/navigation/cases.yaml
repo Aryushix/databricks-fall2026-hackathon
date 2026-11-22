@@ -1,0 +1,66 @@
+# SYNTHETIC labeled cases for evaluating symptom navigation (tools/eval_navigation.py).
+# Written for evaluation; no real patient messages. Labels are the intended behaviour of the draft
+# config, not clinical truth: these metrics measure consistency, not clinical correctness.
+#
+# Per case: urgency; red_flags (categories expected to fire); extraction labels (only the fields
+# listed are scored); required / supporting care needs.
+
+cases:
+  - {id: c01, message: "I have severe pain in my lower right abdomen.", urgency: urgent, red_flags: [severe_abdominal_pain],
+     extraction: {body_locations: [abdomen_lower_right], severity: severe, onset: unknown}, required: [emergency_department, general_surgery], supporting: [ct_scan]}
+  - {id: c02, message: "knee hurts for months, stairs are hard", urgency: routine, red_flags: [],
+     extraction: {body_locations: [knee], onset: gradual}, required: [orthopedics], supporting: [mri]}
+  - {id: c03, message: "vision getting blurry over the past year", urgency: routine, red_flags: [],
+     extraction: {body_locations: [eye], onset: gradual}, required: [ophthalmology], supporting: []}
+  - {id: c04, message: "I'm on dialysis and moved to Pune", urgency: routine, red_flags: [],
+     extraction: {special_context: [on_dialysis]}, required: [hemodialysis], supporting: []}
+  - {id: c05, message: "bad toothache", urgency: routine, red_flags: [],
+     extraction: {body_locations: [teeth]}, required: [dentistry], supporting: []}
+  - {id: c06, message: "crushing chest pain and sweating for 20 minutes", urgency: emergency, red_flags: [possible_heart_attack],
+     extraction: {body_locations: [chest], associated_symptoms: [sweating]}, required: [emergency_department, cardiac_catheterization], supporting: [adult_icu_ventilation]}
+  - {id: c07, message: "papa ka muh tedha ho gaya hai aur bol nahi pa rahe", urgency: emergency, red_flags: [possible_stroke],
+     extraction: {}, required: [emergency_department, ct_scan, stroke_thrombolysis], supporting: []}
+  - {id: c08, message: "my daughter can't breathe and her lips are blue", urgency: emergency, red_flags: [breathing_difficulty],
+     extraction: {special_context: [infant_child]}, required: [emergency_department], supporting: [adult_icu_ventilation]}
+  - {id: c09, message: "bike accident, there is a lot of blood from his head", urgency: emergency, red_flags: [major_trauma_bleeding],
+     extraction: {body_locations: [head], associated_symptoms: [bleeding]}, required: [emergency_department, trauma_care_24x7], supporting: [blood_bank, ct_scan]}
+  - {id: c10, message: "my son got an electric shock and has burns on his hand", urgency: emergency, red_flags: [burns],
+     extraction: {body_locations: [arm], special_context: [infant_child]}, required: [emergency_department, burn_unit], supporting: []}
+  - {id: c11, message: "I am 8 months pregnant and bleeding", urgency: emergency, red_flags: [pregnancy_emergency],
+     extraction: {special_context: [pregnancy], associated_symptoms: [bleeding]}, required: [emergency_department, emergency_c_section_24x7], supporting: [blood_bank, nicu]}
+  - {id: c12, message: "my 2 week old baby is not feeding and very sleepy", urgency: emergency, red_flags: [newborn_child_emergency],
+     extraction: {special_context: [infant_child]}, required: [emergency_department], supporting: [nicu, picu]}
+  - {id: c13, message: "mummy behosh ho gayi hain", urgency: emergency, red_flags: [unconscious_seizure],
+     extraction: {}, required: [emergency_department], supporting: [ct_scan]}
+  - {id: c14, message: "saanp ne kaat liya pair par", urgency: emergency, red_flags: [poisoning_overdose_bites],
+     extraction: {body_locations: [leg]}, required: [emergency_department], supporting: [adult_icu_ventilation, anti_snake_venom, anti_rabies]}
+  - {id: c15, message: "my lips and tongue are swelling after eating prawns", urgency: emergency, red_flags: [severe_allergic_reaction],
+     extraction: {associated_symptoms: [swelling]}, required: [emergency_department], supporting: []}
+  - {id: c16, message: "I don't want to live anymore", urgency: emergency, red_flags: [self_harm],
+     extraction: {}, required: [emergency_department], supporting: []}
+  - {id: c17, message: "pet mein bahut dard hai 2 din se", urgency: urgent, red_flags: [severe_abdominal_pain],
+     extraction: {body_locations: [abdomen], severity: severe, duration: "2 din"}, required: [emergency_department, general_surgery], supporting: [ct_scan]}
+  - {id: c18, message: "पेट में बहुत दर्द और उल्टी", urgency: urgent, red_flags: [severe_abdominal_pain],
+     extraction: {body_locations: [abdomen], associated_symptoms: [vomiting]}, required: [emergency_department, general_surgery], supporting: [ct_scan]}
+  - {id: c19, message: "mild headache since yesterday", urgency: routine, red_flags: [],
+     extraction: {body_locations: [head], severity: mild, duration: "since yesterday"}, required: [general_medicine], supporting: []}
+  - {id: c20, message: "lower back pain for two weeks", urgency: routine, red_flags: [],
+     extraction: {body_locations: [back], duration: "two weeks"}, required: [orthopedics], supporting: [mri]}
+  - {id: c21, message: "ear pain since two days", urgency: routine, red_flags: [],
+     extraction: {body_locations: [ear]}, required: [ent], supporting: []}
+  - {id: c22, message: "my skin is itchy with a rash", urgency: routine, red_flags: [],
+     extraction: {body_locations: [skin], associated_symptoms: [rash]}, required: [dermatology], supporting: []}
+  - {id: c23, message: "burning sensation when I pass urine", urgency: routine, red_flags: [],
+     extraction: {body_locations: [urinary], pain_type: burning}, required: [urology], supporting: [general_medicine]}
+  - {id: c24, message: "I feel bad", urgency: unclear, red_flags: [], extraction: {body_locations: []}, required: [], supporting: []}
+  - {id: c25, message: "help", urgency: unclear, red_flags: [], extraction: {}, required: [], supporting: []}
+  - {id: c26, message: "no chest pain, just a dry cough for a week", urgency: routine, red_flags: [],
+     extraction: {associated_symptoms: [cough], duration: "1 week"}, required: [general_medicine], supporting: []}
+  - {id: c27, message: "my kidneys have failed and I need dialysis three times a week", urgency: routine, red_flags: [],
+     extraction: {special_context: [on_dialysis, kidney_disease]}, required: [hemodialysis], supporting: [general_medicine]}
+  - {id: c28, message: "sudden severe headache and confusion", urgency: emergency, red_flags: [possible_stroke],
+     extraction: {body_locations: [head], severity: severe, onset: sudden}, required: [emergency_department, ct_scan, stroke_thrombolysis], supporting: []}
+  - {id: c29, message: "I am pregnant and have stomach pain", urgency: urgent, red_flags: [],
+     extraction: {body_locations: [abdomen], special_context: [pregnancy]}, required: [general_medicine, obstetrics], supporting: [general_surgery]}
+  - {id: c30, message: "need a dialysis centre near me, I have kidney failure", urgency: routine, red_flags: [],
+     extraction: {special_context: [on_dialysis, kidney_disease]}, required: [hemodialysis], supporting: [general_medicine]}

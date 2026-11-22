@@ -1,0 +1,258 @@
+{
+  "_note": "SYNTHETIC example: invented facilities, records and phone numbers (tests/nav_synthetic.py). Not real data.",
+  "request": {
+    "patient_message": "crushing chest pain and sweating",
+    "latitude": 19.076,
+    "longitude": 72.8777,
+    "max_results": 5
+  },
+  "response": {
+    "request_id": "example",
+    "disclaimer": "This tool helps find facilities; it does not give medical advice. If this may be an emergency, call 112.",
+    "emergency": {
+      "call_emergency_services": true,
+      "crisis": false,
+      "message": "This may be an emergency. Call 112 now, or 108 for an ambulance.",
+      "category_messages": [
+        "Chest pain or pressure, or pain spreading to the arm or jaw, needs emergency care now."
+      ],
+      "numbers": [
+        {
+          "label": "Emergency: police, fire, ambulance",
+          "number": "112",
+          "alt_number": null,
+          "note": null,
+          "source_url": "https://112.gov.in/about"
+        },
+        {
+          "label": "Ambulance (most states)",
+          "number": "108",
+          "alt_number": null,
+          "note": "108 is being integrated into 112.",
+          "source_url": "https://112.gov.in/about"
+        }
+      ],
+      "transport_advice": "Don't drive yourself. Call 108 or 112 for an ambulance, or ask someone to take you."
+    },
+    "triage": {
+      "urgency": "emergency",
+      "rule_floor": "emergency",
+      "red_flag_rule_ids": [
+        "CARDIAC_CHEST_PAIN"
+      ],
+      "red_flag_categories": [
+        "possible_heart_attack"
+      ],
+      "raised_by_extraction": false,
+      "reason": "Warning signs in the message need emergency care.",
+      "advice": "Don't drive yourself. Call 108 or 112 for an ambulance, or ask someone to take you."
+    },
+    "symptom_analysis": {
+      "language": "en",
+      "body_locations": [
+        "chest"
+      ],
+      "pain_type": "pressure",
+      "severity": "unknown",
+      "onset": "unknown",
+      "duration": null,
+      "associated_symptoms": [
+        "sweating"
+      ],
+      "special_context": [],
+      "danger_signs": [],
+      "extraction_method": "rules_fallback",
+      "extraction_confidence": null,
+      "missing_information": [
+        "severity",
+        "onset",
+        "duration",
+        "breathlessness"
+      ]
+    },
+    "care_needs": [
+      {
+        "id": "emergency_department",
+        "role": "required",
+        "verification_kb": null,
+        "proxy_kbs": []
+      },
+      {
+        "id": "cardiac_catheterization",
+        "role": "required",
+        "verification_kb": "cardiac_catheterization",
+        "proxy_kbs": []
+      },
+      {
+        "id": "adult_icu_ventilation",
+        "role": "supporting",
+        "verification_kb": null,
+        "proxy_kbs": []
+      }
+    ],
+    "recommendations": [
+      {
+        "rank": 1,
+        "list": "nearest",
+        "hospital_id": "syn-003",
+        "hospital_name": "Synthetic Community Hospital",
+        "facility_type": "hospital",
+        "latitude": 19.086792,
+        "longitude": 72.8777,
+        "straight_line_distance_km": 1.2,
+        "travel": null,
+        "location_status": "verified",
+        "listed_phone": null,
+        "listed_phone_note": null,
+        "capability_match": false,
+        "matched_care_needs": [],
+        "unverified_signals": [],
+        "unmatched_required_needs": [
+          "emergency_department",
+          "cardiac_catheterization"
+        ],
+        "warnings": [
+          "Capability not verified: call ahead.",
+          "Emergency department not verified: call ahead.",
+          "Cardiac catheterization (cath lab) not verified: call ahead."
+        ],
+        "requires_manual_review": false,
+        "review_reasons": [],
+        "also_listed_as": [],
+        "explanation": "Nearest hospital in our data; capability not verified, call ahead; 1.2 km straight-line."
+      },
+      {
+        "rank": 2,
+        "list": "nearest",
+        "hospital_id": "syn-001",
+        "hospital_name": "Synthetic Kidney Care Hospital",
+        "facility_type": "hospital",
+        "latitude": 19.106577,
+        "longitude": 72.8777,
+        "straight_line_distance_km": 3.4,
+        "travel": null,
+        "location_status": "verified",
+        "listed_phone": "+910000000001",
+        "listed_phone_note": "Number from the facility listing, not verified by us.",
+        "capability_match": false,
+        "matched_care_needs": [],
+        "unverified_signals": [],
+        "unmatched_required_needs": [
+          "emergency_department",
+          "cardiac_catheterization"
+        ],
+        "warnings": [
+          "Capability not verified: call ahead.",
+          "Emergency department not verified: call ahead.",
+          "Cardiac catheterization (cath lab) not verified: call ahead."
+        ],
+        "requires_manual_review": false,
+        "review_reasons": [],
+        "also_listed_as": [],
+        "explanation": "Nearest hospital in our data; capability not verified, call ahead; 3.4 km straight-line."
+      },
+      {
+        "rank": 3,
+        "list": "nearest",
+        "hospital_id": "syn-002",
+        "hospital_name": "Synthetic General Hospital",
+        "facility_type": "hospital",
+        "latitude": 19.147046,
+        "longitude": 72.8777,
+        "straight_line_distance_km": 7.9,
+        "travel": null,
+        "location_status": "partly_verified",
+        "listed_phone": null,
+        "listed_phone_note": null,
+        "capability_match": false,
+        "matched_care_needs": [],
+        "unverified_signals": [],
+        "unmatched_required_needs": [
+          "emergency_department",
+          "cardiac_catheterization"
+        ],
+        "warnings": [
+          "Capability not verified: call ahead.",
+          "Emergency department not verified: call ahead.",
+          "Cardiac catheterization (cath lab) not verified: call ahead.",
+          "One of the address fields didn't check out; confirm the address."
+        ],
+        "requires_manual_review": true,
+        "review_reasons": [],
+        "also_listed_as": [],
+        "explanation": "Nearest hospital in our data; capability not verified, call ahead; 7.9 km straight-line."
+      },
+      {
+        "rank": 4,
+        "list": "verified",
+        "hospital_id": "syn-005",
+        "hospital_name": "Synthetic Heart Institute",
+        "facility_type": "hospital",
+        "latitude": 19.237878,
+        "longitude": 72.8777,
+        "straight_line_distance_km": 18.0,
+        "travel": null,
+        "location_status": "verified",
+        "listed_phone": null,
+        "listed_phone_note": null,
+        "capability_match": true,
+        "matched_care_needs": [
+          {
+            "care_need": "cardiac_catheterization",
+            "role": "required",
+            "kb_id": "cardiac_catheterization",
+            "via": "kb",
+            "status": "CONFIRMED",
+            "confidence": 0.95,
+            "confidence_basis": "heuristic_v1",
+            "reason_codes": [
+              "DIRECT_SINGLE_ORIGIN"
+            ],
+            "kb_review_status": "draft",
+            "evidence": [
+              {
+                "quote": "Synthetic Heart Institute's cath lab performs angioplasty 24x7.",
+                "field": "capability",
+                "source_type": "extracted_record",
+                "source_url": null,
+                "page_unknown": true,
+                "record_source_urls": [
+                  "https://example.org/listing"
+                ]
+              }
+            ]
+          }
+        ],
+        "unverified_signals": [],
+        "unmatched_required_needs": [
+          "emergency_department"
+        ],
+        "warnings": [
+          "Only one source describes this service.",
+          "The rules for checking cardiac catheterization (cath lab) are still a draft.",
+          "Emergency department not verified: call ahead."
+        ],
+        "requires_manual_review": false,
+        "review_reasons": [],
+        "also_listed_as": [],
+        "explanation": "Confirmed cardiac catheterization (cath lab) (stronger evidence); 18.0 km straight-line."
+      }
+    ],
+    "follow_up_questions": [],
+    "coverage_note": "Emergency department can't be verified for any facility yet. Our data doesn't list every facility in India, and straight-line distance isn't road distance.",
+    "search": {
+      "radius_km": 25.0,
+      "widened": false,
+      "nearest_facility_km": 1.2
+    },
+    "degraded": false,
+    "degraded_reasons": [],
+    "versions": {
+      "navigation": "0.1.0",
+      "red_flag_rules": "0.1.0",
+      "care_needs": "0.1.0",
+      "kb": "0.2.0#cardia;0.2.0#hemodi",
+      "verification_run": "0.2.0-phase2#synthetic00@2026-11-21T00:00:00+00:00"
+    }
+  }
+}
