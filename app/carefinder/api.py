@@ -30,6 +30,10 @@ from pydantic import (
     model_validator,
 )
 from schemas import Intent, UserRequest
+from recommendation_connector import (
+    RecommendationSearchService,
+    PreserveRecommendationRanking,
+)
 
 # ==========================================
 # 1. INITIALIZE FASTAPI
@@ -195,10 +199,13 @@ class APIUserRequest(BaseModel):
 # Production will require persistent storage.
 
 orchestrator = ApplicationOrchestrator(
-    demo_mode=True
+    search_service=RecommendationSearchService(),
+    ranking_service=PreserveRecommendationRanking(),
+    demo_mode=False,
 )
-attach_chatbot(app, orchestrator, demo_mode=True)
-attach_frontend_config(app, demo_mode=True)
+
+attach_chatbot(app, orchestrator, demo_mode=False)
+attach_frontend_config(app, demo_mode=False)
 
 # ==========================================
 # 5. HEALTH CHECK ENDPOINT

@@ -1,6 +1,6 @@
 # Databricks Apps configuration. Deploy the app with the repo's Git folder as
 # its source path; Databricks installs requirements.txt and runs this command.
-command: ['streamlit', 'run', 'app/app.py']
+command: ['python', 'deploy_carefinder.py']
 
 env:
   - name: 'HACKATHON_CATALOG'
