@@ -140,5 +140,6 @@ def test_normalize_treatment(run):
     v = run[0]
     assert v.normalize_treatment("heart catheterization") == "cardiac_catheterization"
     assert v.normalize_treatment("Haemodialysis") == "hemodialysis"
+    assert v.normalize_treatment("CT angiography") == "ct_scan"   # a CT exam, never cardiac catheterization
     with pytest.raises(ValueError):
-        v.normalize_treatment("CT angiography")
+        v.normalize_treatment("acupuncture")

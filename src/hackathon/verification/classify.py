@@ -41,7 +41,7 @@ _RESTARTED = re.compile(r"\b(?:restarted|resumed|re-?started|revived|reopened|no
 _PLANNED = re.compile(r"\b(?:planned|plans? to|proposed|upcoming|coming soon|will be (?:started|launched|set up|"
                       r"introduced|available|commissioned)|to be (?:started|set up|commissioned|launched|installed)|"
                       r"under construction|being (?:built|set up|established)|soon|shortly|in the pipeline)\b", re.I)
-_OUTSOURCED = re.compile(r"\b(?:outsourc\w*|tie[- ]?up|tied up|through (?:an? )?(?:external|outside)|"
+_OUTSOURCED = re.compile(r"\b(?:outsourc\w*|tie[- ]?up|tied up|(?:through|via|by) (?:an? )?(?:external|outside)|outside collaboration|"
                          r"sent (?:out|outside))\b", re.I)
 _SCHEME = re.compile(r"\b(?:esic|cghs|echs|pm-?jay|ayushman|insurance|tpa|cashless|empanel\w*|railway|panel)\b", re.I)
 _NEG_BEFORE = re.compile(r"(?:\bno\b|\bnot\b|\black(?:s|ing)?(?: of)?\b|\babsence of\b|"
@@ -109,7 +109,7 @@ class RuleClassifier:
 
     model_id = "rules"
 
-    def __init__(self, version: str = "rules_v1"):
+    def __init__(self, version: str = "rules_v2"):
         self.version = version
 
     def _make(self, claim, match, kind, cues=(), scope="all", temporal="current"):

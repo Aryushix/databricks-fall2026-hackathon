@@ -44,7 +44,7 @@ def test_parallel_run_is_identical_to_single_process(tmp_path):
     v = Verifier(workers=2, min_parallel_claims=0).build(_frame(), tmp_path / "crawl.sqlite")
     assert v._tag_workers(10) == 2
     parallel = list(v.run())
-    assert len(serial) == len(FACILITIES) * 2 and _strip(parallel) == _strip(serial)
+    assert len(serial) == len(FACILITIES) * len(v.entries) and _strip(parallel) == _strip(serial)
 
 
 def test_cli_run_with_workers_and_json_log_then_query_modes(tmp_path, capsys):

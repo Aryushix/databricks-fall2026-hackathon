@@ -38,7 +38,8 @@ def test_kb_ids_align_with_real_kb_files():
     assert needs[0].verification_kb == "hemodialysis"
     _, _, needs = needs_for("crushing chest pain")
     kb = {n.id: n.verification_kb for n in needs}
-    assert kb["cardiac_catheterization"] == "cardiac_catheterization" and kb["emergency_department"] is None
+    assert kb["cardiac_catheterization"] == "cardiac_catheterization"
+    assert kb["emergency_department"] == "emergency_department"   # KB added in Phase 3
 
 
 def test_adding_a_kb_file_lights_up_the_need():
