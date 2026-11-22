@@ -29,11 +29,11 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from schemas import Intent, UserRequest
 from recommendation_connector import (
-    RecommendationSearchService,
     PreserveRecommendationRanking,
+    RecommendationSearchService,
 )
+from schemas import Intent, UserRequest
 
 # ==========================================
 # 1. INITIALIZE FASTAPI
