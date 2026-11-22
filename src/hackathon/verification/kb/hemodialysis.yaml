@@ -1,0 +1,64 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format).
+# Examples are SYNTHETIC.
+
+concept_id: hemodialysis
+kb_version: 0.2.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-21
+reviewed_by: null
+reviewed_on: null
+canonical_name: Hemodialysis
+category: renal
+specialization: advanced
+plausible_facility_types: [hospital, clinic]    # standalone dialysis centres are often listed as clinics
+
+codes:
+  mesh:
+    - {id: D006435, name: Renal Dialysis, note: "also covers peritoneal dialysis and hemodiafiltration"}
+  icd10_pcs:                    # performance of urinary filtration
+    - {code: 5A1D70Z, qualifier: "intermittent, less than 6 hours per day"}
+    - {code: 5A1D80Z, qualifier: "prolonged intermittent, 6-18 hours per day"}
+    - {code: 5A1D90Z, qualifier: "continuous, more than 18 hours per day"}
+
+synonyms:
+  - '\bha?emo[- ]?dialys[ie]s\b'
+
+children:
+  - id: dialysis_unspecified    # in Indian facility listings plain "dialysis" almost always means hemodialysis;
+    specificity: 0.9            # peritoneal dialysis is caught first as a confusable
+    negates_parent: true        # "dialysis not available" does contradict hemodialysis
+    patterns: ['\b(?:kidney |renal |artificial kidney )?dialys[ie]s\b']
+  - id: crrt
+    specificity: 0.85
+    patterns: ['\bcrrt\b', '\bcontinuous renal replacement\b', '\bsled\b', '\brenal replacement therap\w*']
+  - id: hemodiafiltration
+    patterns: ['\bha?emodiafiltration\b', '\bhdf\b']
+
+ambiguous: []
+
+confusables:
+  - id: peritoneal_dialysis
+    why: a different modality, done mostly at home
+    patterns: ['\bperitoneal dialys[ie]s\b', '\bcapd\b', '\bcontinuous ambulatory peritoneal\b']
+  - id: liver_dialysis
+    why: albumin dialysis for liver failure, not kidney replacement
+    patterns: ['\bliver dialys[ie]s\b', '\balbumin dialys[ie]s\b']
+
+prerequisites:
+  - {id: dialysis_machine, kind: equipment, key: true,
+     patterns: ['\b(?:ha?emo)?dialysis machines?\b', '\bdialy[sz]ers?\b']}
+  - {id: nephrology, kind: specialty, key: true,
+     patterns: ['\bnephrolog(?:y|ist|ists)\b'], taxonomy: ['^(?:pediatric)?nephrolog', 'dialysis']}
+  - {id: ro_water_plant, kind: equipment, key: false,
+     patterns: ['\bro (?:plant|water|system)\b', '\breverse osmosis\b']}
+  - {id: dialysis_technician, kind: staff, key: false, patterns: ['\bdialysis technicians?\b']}
+  - {id: vascular_access, kind: service, key: false,
+     patterns: ['\bav fistula\w*', '\barterio[- ]?venous fistula\w*', '\bavf\b']}
+key_groups: [[dialysis_machine], [nephrology]]
+
+examples:
+  - {text: "Hemodialysis unit with 10 beds", match: exact}
+  - {text: "24x7 dialysis services", match: child}
+  - {text: "Peritoneal dialysis (CAPD) training", match: confusable}
+  - {text: "Fresenius dialysis machines", match: prerequisite}
+  - {text: "Consultant nephrologist", match: prerequisite}

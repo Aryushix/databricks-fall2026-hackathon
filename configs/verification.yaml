@@ -1,0 +1,83 @@
+# Treatment verification: models, thresholds, weights and the source reliability hierarchy.
+# Every output record carries pipeline_version, kb_version and config_hash, so a result can always be
+# traced back to the settings that produced it. Change values here, not in code.
+
+pipeline_version: "0.2.0-phase2"
+
+# Decisions recorded on 2026-11-21 (Phase 1 memo, section 14).
+decisions:
+  provides_means: in_house_including_partner_on_site   # decision 1: partner-run units and visiting
+                                                       # specialists on the premises count; off-site
+                                                       # outsourcing, camps elsewhere and referrals do not
+  confirmed_precision_target: 0.95                     # decision 2
+  precision_bound: wilson_lower_95                     # thresholds are fit so the Wilson 95% lower bound
+                                                       # of CONFIRMED precision meets the target
+  confirmed_from_extracted_only: false                 # decision 6: extracted fields alone never CONFIRM
+  phase2_families: [cardiac_catheterization, hemodialysis]   # decision 5: keep both open
+
+models:
+  # Names come from src/hackathon/config.py (Config.llm_endpoint, Config.embedding_endpoint);
+  # null means "use whatever Config resolves", so one environment variable still moves everything.
+  llm_endpoint: null
+  llm_temperature: 0.0
+  llm_max_tokens: 600
+  rule_classifier_version: rules_v1
+  llm_classifier_version: llm_v1
+
+# Where each kind of evidence comes from, from most to least reliable. A source that can't be
+# identified keeps its own type; it is never upgraded by guessing.
+reliability:
+  official_site_page: 1.0         # text from the facility's own site, cached by tools/facility_crawler.py
+  official_chain_page: 0.6        # a domain shared by 3+ facilities: describes the chain, not the branch
+  official_site_unmatched: 0.5    # the record's website names a different facility: no better than extracted
+  extracted_record: 0.5           # Virtue Foundation extraction; the page behind the claim is unknown
+  chain_domain_min_facilities: 3
+
+# heuristic_v1 scoring: log-odds accumulation. Hand-set; replace with a fitted model once labels exist.
+scoring:
+  basis: heuristic_v1
+  direct_llr: 3.0                 # one origin cluster's best positive claim, before the factors below
+  negative_llr: 3.0               # one origin cluster's best negative claim
+  assertion_weight:               # how much each assertion type counts as "provides"
+    OFFERED: 1.0
+    PARTNER_ON_SITE: 0.9
+    AMBIGUOUS: 0.35
+    RESEARCH_OR_LISTING: 0.3
+    OUTREACH_CAMP: 0.2
+    PERSONNEL_ONLY: 0.2
+  negative_types: [NOT_OFFERED, DISCONTINUED, REFERRAL_ONLY, OUTSOURCED_OFF_SITE]
+  specificity: {exact: 1.0, child: 0.95, ambiguous: 0.6, prerequisite: 1.0}
+  entity: {this: 1.0, unnamed: 0.9, chain: 0.6, ambiguous: 0.3, other: 0.0}   # ambiguous: the record also carries another facility's claims
+  recency: {current: 1.0, undated: 0.85, stale: 0.6}
+  stale_after_years: 5
+  copied_factor: 0.2
+  prerequisite_key_llr: 1.2       # every key prerequisite documented ~ one solid direct claim
+  prerequisite_other_llr: 0.2
+  prerequisite_cap: 2.4
+  # Starting log-odds that a facility provides a treatment, before any evidence.
+  prior_logit:
+    highly_specialized: {hospital: -2.0, clinic: -3.0, default: -4.0}
+    advanced: {hospital: -1.5, clinic: -2.0, default: -3.5}
+    intermediate: {hospital: -1.0, clinic: -1.5, default: -3.0}
+
+decision:
+  confirmed_threshold: 0.90       # heuristic until fit on labels (Phase 4); see threshold_fit below
+  near_threshold_margin: 0.05     # CONFIRMED-eligible within this margin below the threshold -> review
+  threshold_fit: {fitted_on: null, dataset: null, date: null}
+
+copies:
+  min_words: 6                    # shorter claims ("Cath lab") recur naturally across facilities
+  min_facilities: 3               # differently named facilities sharing a claim -> COPIED_LISTING
+  minhash_perms: 64
+  minhash_bands: 16
+  near_duplicate_jaccard: 0.8
+  block_min_shared_items: 6       # list-level copying: this many shared items with another facility ...
+  block_min_share: 0.20           # ... making up this share of the facility's list (0.25 missed a 9-of-41 pasted block)
+  block_item_max_df: 60           # items carried by more facilities than this are too common to signal
+
+review:
+  highly_specialized: true
+  unidentified_source_only: true
+  affiliate: true
+  rule_llm_disagreement: true
+  prerequisites_missing: true

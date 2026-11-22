@@ -1,0 +1,163 @@
+# Treatment verification
+
+Does this facility provide this treatment, and what evidence says so? For every facility and treatment,
+`src/hackathon/verification` returns a status (CONFIRMED, LIKELY, NOT CONFIRMED, UNVERIFIED, CONTRADICTED),
+reason codes, a confidence score and the exact evidence behind the verdict.
+
+**A result describes what the documented evidence supports. It is not a guarantee that a treatment is
+clinically available today.** Every field in this dataset is a claim extracted from the web.
+
+Status: **Phase 2** of the build. Two treatment families are wired end to end (cardiac catheterization and
+hemodialysis). Query modes 2 and 3, Spark batch runs (Phase 3), and the evaluation and calibration
+tools (Phase 4) are not built yet. The design memo behind the choices below covers the data audit.
+
+## How it works
+
+1. **Ledger.** Every facility is split once into atomic claims: one per list item, description sentence,
+   or line of the facility's own website (cached by `tools/facility_crawler.py` in `crawl.sqlite`). Each
+   claim carries a content hash, its lineage and its origin cluster.
+   - All extracted fields of a record come from one upstream extraction run, so they form **one** origin
+     cluster (`vf:<unique_id>`). Agreement between `capability`, `procedure` and `description` is never
+     counted as corroboration.
+   - Each official website is its own cluster (`official:<domain>`), but only if the site names the
+     facility (`entities.owns_site`). A site that names someone else, or names another city, is
+     `official_site_unmatched` and its claims count as another facility's. A site shared by 3+ records,
+     or by records in 2+ cities, is a chain site and describes the chain, not the branch.
+2. **Tagging** (`kb.py`, `kb/*.yaml`). Each treatment has one reviewed KB entry: synonyms, children
+   (coronary angiography and PCI are forms of cardiac catheterization), ambiguous terms settled by
+   context, confusables that must never count (CT angiography, eye angiography, "biochemical
+   angioplasty", urinary catheters, peritoneal dialysis), and prerequisites (cath lab, interventional
+   cardiology, dialysis machines, nephrology). Confusables are matched first and block any overlapping
+   positive match; the longest match wins, so "cath lab" is a prerequisite, not the procedure.
+3. **Labels** (`classify.py`). Each tagged claim gets an assertion type: `OFFERED`, `PARTNER_ON_SITE`,
+   `OUTSOURCED_OFF_SITE`, `REFERRAL_ONLY`, `PLANNED_OR_COMING_SOON`, `DISCONTINUED`, `NOT_OFFERED`,
+   `EDUCATIONAL_OR_GENERIC`, `OTHER_ENTITY`, `OUTREACH_CAMP`, `PERSONNEL_ONLY`, `RESEARCH_OR_LISTING`,
+   `EXTRACTOR_ARTIFACT` or `AMBIGUOUS`. The rule pass always runs; `--llm` adds the Databricks model pass
+   (`DualPass`), whose quote must be an exact substring of the claim. Disagreements are flagged. Labels are
+   cached in SQLite by claim text, concept, model and version. Entity matching runs in code, not in the
+   model.
+4. **Copies** (`copies.py`). A long claim that recurs under 3+ unrelated facilities, or a list item pasted
+   as a block into 3+ unrelated facilities' lists, is a `COPIED_LISTING` and never counts as support.
+5. **Score** (`scoring.py`, `heuristic_v1`). Log-odds from a prior (by specialization and facility type),
+   plus one term per origin cluster from its single best positive claim, minus its best negative claim,
+   plus a capped prerequisite term. Weights are hand-set in `configs/verification.yaml`.
+6. **Status** (`decide.py`). Deterministic rules, in this order:
+   1. **CONTRADICTED**: a credible negative about the treatment itself and this facility, more reliable or
+      more recent than the best positive, or unopposed. An undated tie is `CONFLICT_UNRESOLVED`.
+   2. **CONFIRMED**: an `OFFERED` claim on the facility's own website (extracted fields alone never
+      confirm, decision 6), a plausible facility type, no unresolved conflict, and a score at or above
+      `confirmed_threshold`.
+   3. **LIKELY**: a direct claim that is not copied, from a plausible facility type, with at least one key
+      prerequisite for a highly specialized treatment; or every key prerequisite documented.
+   4. **NOT CONFIRMED**: the treatment is mentioned, but nothing establishes provision.
+   5. **UNVERIFIED**: the treatment is never mentioned. Absence is never negative evidence.
+
+`confidence_score` is labelled `confidence_basis: heuristic_v1`. For CONFIRMED and LIKELY it is the
+score; for NOT CONFIRMED and CONTRADICTED it is one minus the score; for UNVERIFIED it is `null`. It is
+not a calibrated probability until Phase 4 fits it on labeled pairs.
+
+### What it reuses from this repo
+
+| From | Used for |
+| --- | --- |
+| `cleaning.jlist`, `clean_text`, `missing` | Reading list fields and text exactly as cleaning wrote them |
+| `cleaning.domain_of`, `is_non_official`, `NON_OFFICIAL_DOMAINS` | Website domains and directory sites |
+| `location_check` columns (`location_status`, `location_confidence`, `location_evidence`, `resolved_latitude/longitude`) | Identity checks and the output's location block |
+| `config.Config.llm_endpoint` | The model for the `--llm` pass (`models.llm_endpoint: null` means "use Config") |
+| `rag._workspace()`, `rag._text_from_content` | The Databricks client and response parsing for the model pass |
+| `crawl.sqlite` schema from `tools/facility_crawler.py` | Official website pages |
+
+## Install and configure
+
+```bash
+pip install -r tools/requirements.txt
+```
+
+Settings live in `configs/verification.yaml`: decisions, model names, the source reliability hierarchy,
+scoring weights, thresholds, copy detection and review flags. Every output records `pipeline_version`,
+`config_hash` and each KB entry's version and content hash.
+
+## Run it
+
+Inputs are the CSV that `tools/verify_locations.py` writes (the laptop copy of `silver_facilities_verified`)
+and, optionally, the crawler cache. **Write outputs outside the repo**: they are real facility records.
+
+```bash
+python tools/verify_treatments.py run \
+    --facilities ~/hackathon-data/facilities_verified.csv \
+    --crawl-db ~/hackathon-data/crawl.sqlite \
+    --out-dir ~/hackathon-data/verification
+
+python tools/verify_treatments.py show --records ~/hackathon-data/verification/records.jsonl \
+    --hospital-id <unique_id> --treatment cardiac_catheterization
+```
+
+Add `--llm` on Databricks (or with a Databricks CLI profile) to run the model pass. A full run over
+9,989 facilities and both families takes about 2 minutes on a laptop with the rule pass alone.
+
+Output: `records.jsonl` (one record per facility and treatment) and `summary.json` (counts by status,
+reason code and review flag). Each record has the contract fields (`verification_status`,
+`reason_codes`, `confidence_score`, `confidence_basis`, `independent_origin_count`, `direct_evidence`,
+`supporting_evidence`, `contradictory_evidence`, `missing_prerequisites`, `reasoning_summary`,
+`requires_manual_review`, `review_reasons`, `pipeline_version`, `run_timestamp`), plus
+`not_counted_evidence`, `identity_checks`, `record_sources` and `score_terms` for auditing. Each evidence
+item has `claim_id, quote, field, assertion_type, concept_ids, source_url, source_type, lineage,
+origin_cluster_id, source_date, retrieval_date, entity_match, relevance_score, classifier_model,
+classifier_version`. `reasoning_summary` is built from a template over the codes and evidence.
+
+## First run, 2026-11-21 (status counts, not accuracy)
+
+Rule pass only, on all 9,989 facilities. There are no labels yet, so these are counts, not performance.
+
+| Treatment | CONFIRMED | LIKELY | NOT CONFIRMED | UNVERIFIED | CONTRADICTED | Flagged for review |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Cardiac catheterization | 6 | 288 | 535 | 9,160 | 0 | 416 |
+| Hemodialysis | 46 | 906 | 152 | 8,885 | 0 | 966 |
+
+Every one of the 16,705 evidence quotes in that run was checked to be verbatim in the input CSV or the
+cached page. Neither family has a credible negative claim in the data, so CONTRADICTED is covered only by
+the synthetic regression suite.
+
+## Tests
+
+`pytest` runs `tests/test_verification_components.py` (KB, ledger, every assertion type, model-output
+checks, cache, entities, copies) and `tests/test_verification_pipeline.py` (a SYNTHETIC fixture with one
+facility per status, the output contract, and "extracted fields alone never confirm"). No real records
+are in the tests: the repo is public and the data's sharing terms keep it out.
+
+## Run the evaluation
+
+Not built yet: sampling, labeling guidelines, metrics, calibration and threshold fitting are Phase 4.
+`decisions.confirmed_precision_target` is 0.95 on the Wilson 95% lower bound, so the threshold fit needs
+about 73 labeled CONFIRMED pairs with no errors, or 142 with at most 2.
+
+## Add a treatment
+
+1. Copy `src/hackathon/verification/kb/hemodialysis.yaml` to `<concept_id>.yaml` and fill in synonyms,
+   children, ambiguous terms, confusables, prerequisites, `key_groups`, `specialization`,
+   `plausible_facility_types` and codes (MeSH; ICD-10-PCS where it maps cleanly).
+2. Keep `review_status: draft` until a clinician or a teammate has checked it; records carry it.
+3. Add SYNTHETIC `examples` with the expected match kind; `tests/test_verification_components.py`
+   checks every example of every entry.
+4. Run `verify_treatments.py run --treatments <concept_id>`. Nothing else is reprocessed: the ledger is
+   rebuilt in seconds and cached labels are reused.
+
+## Known limitations
+
+- **Extracted claims have no page.** `source_urls` is one list per facility, so an extracted claim's source
+  is `extracted_record`, never upgraded by guessing. Extracted fields alone can reach LIKELY at most.
+- **Official evidence is scarce.** The crawler cached pages for 446 facilities; 91 of those sites don't
+  name the facility. CONFIRMED is out of reach for the rest until the crawler is re-run.
+- **Quotes are the extractor's words.** The substring check stops a model inventing quotes; it can't catch
+  an extraction that misread the page. Official-page quotes are the page's own text.
+- **The rule pass is a cue list.** It misses paraphrases and can misfire (tests pin the known cases).
+  The model pass is implemented and unit-tested with a fake client but has not run against the
+  Databricks endpoint yet.
+- **No embedding retrieval yet.** Tagging is pattern-based; claims phrased in ways the KB doesn't list are
+  missed (recall unknown until Phase 4).
+- **Copy detection catches exact and near-exact copies,** not paraphrased ones.
+- **Entity matching is name-based.** A claim about a sibling that doesn't name it can't be told apart,
+  except when the same record also names the sibling (then all its unnamed claims become `ENTITY_AMBIGUOUS`).
+- **Chain sites** are detected only among facilities in this dataset; a chain with one record here passes
+  as a branch site.
+- **Scores are heuristic** until calibrated on ground-truth labels.

@@ -36,3 +36,7 @@ data/*
 Thumbs.db
 .idea/
 .vscode/
+
+# Treatment verification outputs are real facility records: keep them out of Git
+records.jsonl
+labels.sqlite
