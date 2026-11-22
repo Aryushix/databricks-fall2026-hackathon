@@ -147,8 +147,8 @@ def test_dentistry_fallback_uses_dentists_and_signals():
     facs = [facility("hosp", 1), facility("dent", 3, ftype="dentist", specialties=["dentistry"]), facility("clinic", 2, ftype="clinic")]
     needs = TABLE.care_needs(None, None, "routine") or [CareNeed(id="dentistry", role="required")]
     out, _, note, _ = rank(store(facs, []), needs=needs)
-    assert [r.hospital_id for r in out] == ["hosp", "dent"]
-    dent = out[1]
+    assert [r.hospital_id for r in out] == ["dent", "hosp"]          # dentists first, then hospitals; no clinics
+    dent = out[0]
     assert {(s.source, s.value) for s in dent.unverified_signals} == {("specialties", "dentistry"), ("facilityTypeId", "dentist")}
     assert "Dentistry can't be verified for any facility yet." in note
 
@@ -162,6 +162,20 @@ def test_duplicates_collapse_to_one_entry():
     assert ids.count("a") + ids.count("b") == 1 and "c" in ids
     first = out[0]
     assert first.also_listed_as == (["b"] if first.hospital_id == "a" else ["a"])
+
+
+def test_facilities_without_a_duplicate_group_are_not_collapsed():
+    # Real files store "no group" as an empty cell, which pandas reads as NaN (truthy). Regression test.
+    facs = [facility(f"h{i}", 1 + i, dup=float("nan")) for i in range(5)] + [facility("g1a", 30, dup="g1"),
+                                                                         facility("g1b", 31, dup="g1")]
+    out, *_ = rank(store(facs, []), needs=HEART, urgency="emergency")
+    assert [r.hospital_id for r in out] == ["h0", "h1", "h2"] and all(r.also_listed_as == [] for r in out)
+
+
+def test_fallback_prefers_the_need_s_facility_types_in_order():
+    facs = [facility("hosp", 1), facility("dent_far", 20, ftype="dentist")]
+    out, *_ = rank(store(facs, []), needs=[CareNeed(id="dentistry", role="required")])
+    assert [r.hospital_id for r in out] == ["dent_far", "hosp"]
 
 
 def test_missing_coordinates_are_excluded_and_counted():
@@ -182,6 +196,13 @@ def test_location_status_and_review_flags_carry_through():
     assert "The source page for this listing is unknown." in r.warnings
     assert any("point to different places" in w for w in r.warnings)
     assert "Hemodialysis is likely, not confirmed." in r.warnings
+
+
+def test_pin_area_coordinates_are_flagged_as_approximate():
+    f = facility("a", 2)
+    f["resolved_location_source"] = "pin_area"
+    r = rank(store([f], [record("a", "hemodialysis", "LIKELY", 0.7, 2)]))[0][0]
+    assert any("approximate" in x for x in r.warnings)
 
 
 def test_evidence_is_verbatim_from_records_and_page_unknown_is_labelled():

@@ -30,6 +30,12 @@ LOCATION_REVIEW = ("partly_verified", "conflicting", "unverified")
 BAND_LABELS = {2: ["typical", "stronger"], 3: ["weaker", "typical", "stronger"]}
 
 
+def _group(fac, hid) -> Optional[str]:
+    """The facility's duplicate group, or None. (pandas stores "no group" as NaN, which is truthy.)"""
+    g = fac.at[hid, "dup_group_id"]
+    return g if isinstance(g, str) and g else None
+
+
 def _band(conf: Optional[float], edges: list[float]) -> int:
     return sum(1 for e in edges if (conf or 0.0) >= e)
 
@@ -115,7 +121,7 @@ class NavigationRanker:
             out = []
             for it in items:
                 hid = it[1]
-                g = fac.at[hid, "dup_group_id"]
+                g = _group(fac, hid)
                 if hid in seen_ids or (g and g in seen_groups):
                     continue
                 seen_ids.add(hid)
@@ -136,10 +142,15 @@ class NavigationRanker:
                 types += [t for t in self.table.fallback_types(n.id) if t not in types]
             types = types or ["hospital"]
 
+            pref = {t: k for k, t in enumerate(types)}
+            type_rank = fac.facilityTypeId.map(pref).to_numpy(dtype=float)       # NaN: not a fallback type
+
             def nearest(r_km: float):
-                ok = has_xy & (dist_all <= r_km) & fac.facilityTypeId.isin(types).to_numpy()
-                order = np.argsort(np.where(ok, dist_all, np.inf))[: int(ok.sum())]
-                return [((0, 0, 0, float(dist_all[i])), fac.index[i], 0) for i in order if fac.index[i] not in contradicted]
+                # facility types in config order of preference (dentists before hospitals for dentistry), then distance
+                ok = has_xy & (dist_all <= r_km) & ~np.isnan(type_rank)
+                idx = np.flatnonzero(ok)
+                idx = idx[np.lexsort((dist_all[idx], type_rank[idx]))]
+                return [((0, 0, 0, float(dist_all[i])), fac.index[i], 0) for i in idx if fac.index[i] not in contradicted]
 
             fb = collapse(nearest(used_radius), set(groups), set(ids))
             if not fb and used_radius < widen:
@@ -206,6 +217,8 @@ class NavigationRanker:
         if loc_status in LOCATION_REVIEW:
             review = True
             warnings.append(self.w["location_status"][loc_status])
+        if f.resolved_location_source == "pin_area":
+            warnings.append(self.w["approximate_location"])
 
         signals = []
         for n in needs:
@@ -231,7 +244,7 @@ class NavigationRanker:
             also_listed_as=self._mates(fac, hid), explanation=explanation)
 
     def _mates(self, fac, hid) -> list[str]:
-        g = fac.at[hid, "dup_group_id"]
+        g = _group(fac, hid)
         if not g:
             return []
         return [x for x in fac.index[fac.dup_group_id.to_numpy() == g] if x != hid]

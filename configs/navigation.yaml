@@ -109,6 +109,7 @@ warnings:
     partly_verified: "One of the address fields didn't check out; confirm the address."
     conflicting: "The address fields point to different places; confirm the location before travelling."
     unverified: "The location couldn't be checked; confirm the address."
+  approximate_location: "This facility's position is approximate (its PIN area), so the distance may be off."
   draft_kb: "The rules for checking {need} are still a draft."
   fallback: "Capability not verified: call ahead."
   no_kb: "{need} can't be verified for any facility yet."
