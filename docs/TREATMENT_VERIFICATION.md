@@ -169,6 +169,24 @@ are chains). Same rules (`rules_v2`), same 9,989 facilities, run `240517db1f17`.
 Unlike the earlier runs, the 1,049 records that became CONFIRMED with the new pages haven't all been read. A random
 40 of them showed four patterns the rules don't handle yet (`docs/verification_benchmark_design.md`, §1.2).
 
+**Wave B, 2026-11-22 (drafts).** Eleven more KBs, drafted under the hackathon deadline. Unlike wave A, **nobody
+has read their results yet**, so treat these counts with more caution. Same rules (`rules_v2`), finished crawl, run
+`52d01b9d1665`:
+
+| Treatment | CONFIRMED | LIKELY | NOT CONFIRMED | UNVERIFIED | CONTRADICTED | Flagged for review |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| MRI | 104 | 892 | 200 | 8,788 | 5 | 919 |
+| Blood bank | 125 | 523 | 165 | 9,171 | 5 | 610 |
+| Adult ICU with ventilation | 590 | 1,628 | 578 | 7,192 | 1 | 2,038 |
+| NICU | 194 | 649 | 198 | 8,947 | 1 | 746 |
+| PICU | 78 | 325 | 702 | 8,883 | 1 | 333 |
+| Burn unit | 20 | 146 | 68 | 9,755 | 0 | 154 |
+| 24x7 trauma care | 200 | 792 | 366 | 8,629 | 2 | 874 |
+| Anti-snake venom | 1 | 6 | 1 | 9,981 | 0 | 7 |
+| Anti-rabies vaccine | 1 | 4 | 39 | 9,945 | 0 | 6 |
+| General surgery | 764 | 1,761 | 578 | 6,884 | 2 | 2,641 |
+| Cataract surgery | 251 | 503 | 87 | 9,148 | 0 | 778 |
+
 ## Tests
 
 `pytest` runs `tests/test_verification_components.py` (KB, ledger, every assertion type, model-output

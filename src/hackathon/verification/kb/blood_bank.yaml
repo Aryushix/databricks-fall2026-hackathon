@@ -1,0 +1,50 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: blood_bank
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Blood bank
+category: support service
+specialization: advanced
+plausible_facility_types: [hospital, clinic]
+
+synonyms:
+  - '\bblood banks?\b'
+  - '\bblood bank(?:ing)? (?:services?|facility|unit)\b'
+  - '\b(?:licensed|licenced|24 ?x ?7|24/7) blood (?:bank|centre|center)\b'
+  - '\bblood (?:centre|center)\b'
+
+children:
+  - id: blood_components
+    patterns: ['\bblood component (?:separation|therapy|units?|facility)\b', '\bcomponent separation (?:unit|facility)\b', '\bapheresis\b', '\bplateletpheresis\b']
+
+ambiguous: []
+
+confusables:
+  - id: blood_storage_unit
+    why: a storage unit holds blood from a blood bank elsewhere; it is not a blood bank
+    patterns: ['\bblood storage (?:unit|centre|center|facility)\b', '\bbsu\b']
+  - id: donation_camp
+    why: an outreach drive, not an on-site blood bank
+    patterns: ['\bblood donation (?:camps?|drives?)\b', '\bblood donors? (?:camp|drive)\b']
+  - id: sample_collection
+    why: a lab collecting blood samples
+    patterns: ['\bblood (?:sample )?collection (?:centre|center|point)\b']
+  - id: address
+    why: an address landmark
+    patterns: ['\b(?:near|opp\.?|opposite|behind|beside|next to|in front of)\s+(?:the\s+)?(?:govt\.?\s+|government\s+|district\s+|civil\s+)?blood bank\b', '\bblood bank (?:road|chowk|colony|lane|marg|square|crossing)\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: '24x7 licensed blood bank', match: exact}
+  - {text: 'Blood component separation unit', match: child}
+  - {text: 'Blood storage unit', match: confusable}
+  - {text: 'Opp. Blood Bank, Civil Lines', match: confusable}
+  - {text: 'Voluntary blood donation camp', match: confusable}

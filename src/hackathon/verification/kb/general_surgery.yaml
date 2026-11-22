@@ -1,0 +1,38 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: general_surgery
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: General surgery
+category: surgical
+specialization: intermediate
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\bgeneral (?:and laparoscopic |& laparoscopic |and minimal access )?surg(?:ery|eries|ical)\b'
+  - '\bgeneral surgeons?\b'
+  - '\blaparoscopic (?:surgery|surgeries|surgeon|procedures?)\b'
+
+children:
+  - id: common_operations
+    patterns: ['\b(?:appendectomy|appendicectomy|cholecystectomy|herniorrhaphy|hernioplasty|laparotomy|hemorrhoidectomy|haemorrhoidectomy|fistulectomy)\b', '\bhernia (?:repair|surgery|operation)\b', '\bgall ?bladder (?:stone )?(?:surgery|removal|operation)\b']
+
+ambiguous: []
+
+confusables:
+  - id: training
+    why: a course, not a service
+    patterns: ['\b(?:ms|m\.s\.) general surgery (?:seats|course|admission)\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'General and laparoscopic surgery', match: exact}
+  - {text: 'Hernia repair', match: child}
+  - {text: 'Laparoscopic cholecystectomy', match: child}

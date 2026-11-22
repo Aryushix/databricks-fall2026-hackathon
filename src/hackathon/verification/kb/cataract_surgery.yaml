@@ -1,0 +1,37 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: cataract_surgery
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Cataract surgery
+category: surgical
+specialization: intermediate
+plausible_facility_types: [hospital, clinic]
+
+synonyms:
+  - '\bcataract (?:surgery|surgeries|operations?|extraction|removal|procedures?)\b'
+  - '\bphaco(?:emulsification)?\b'
+
+children:
+  - id: cataract_techniques
+    patterns: ['\b(?:sics|mics|ecce)\b', '\b(?:iol|intraocular lens) (?:implant\w*|surgery)\b', '\bmanual small[- ]incision cataract\b']
+
+ambiguous: []
+
+confusables:
+  - id: screening_camp
+    why: a screening camp, not surgery on site
+    patterns: ['\bcataract (?:screening|detection) (?:camps?|drives?)\b', '\beye (?:screening )?camps?\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'Phacoemulsification cataract surgery', match: exact}
+  - {text: 'SICS', match: child}
+  - {text: 'Cataract screening camp', match: confusable}

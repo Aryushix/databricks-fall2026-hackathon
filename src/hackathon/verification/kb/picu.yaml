@@ -1,0 +1,36 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: picu
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Paediatric intensive care (PICU)
+category: critical care
+specialization: advanced
+plausible_facility_types: [hospital]
+
+synonyms:
+  - '\bpicu\b'
+  - '\bp(?:a)?ediatric (?:intensive care|icu|critical care)\b'
+  - '\bchildren''?s (?:intensive care|icu)\b'
+
+children: []
+
+ambiguous: []
+
+confusables:
+  - id: neonatal
+    why: a newborn ICU (separate KB)
+    patterns: ['\bnicu\b', '\bneonatal (?:intensive care|icu)\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'PICU', match: exact}
+  - {text: 'Paediatric intensive care unit', match: exact}
+  - {text: 'NICU', match: confusable}

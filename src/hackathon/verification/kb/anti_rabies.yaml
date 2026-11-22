@@ -1,0 +1,37 @@
+# Treatment knowledge base entry (see cardiac_catheterization.yaml for the format). DRAFT, drafted under deadline
+# on 2026-11-22: results not yet read by a person. Examples are SYNTHETIC.
+
+
+concept_id: anti_rabies
+kb_version: 0.1.0
+review_status: draft
+drafted_by: claude-opus-5-5, 2026-11-22
+reviewed_by: null
+reviewed_on: null
+canonical_name: Anti-rabies vaccine
+category: emergency
+specialization: intermediate
+plausible_facility_types: [hospital, clinic]
+
+synonyms:
+  - '\banti[- ]?rabies (?:vaccines?|vaccination|injections?|serum|clinic|treatment)\b'
+  - '\brabies (?:vaccines?|vaccination|immuno ?globulin|injections?|prophylaxis)\b'
+  - '\b(?:erig|hrig)\b'
+  - '\bdog ?bites? (?:treatment|management|clinic|vaccination)\b'
+
+children: []
+
+ambiguous: []
+
+confusables:
+  - id: pet_vaccination
+    why: vaccinating animals (a veterinary service)
+    patterns: ['\b(?:pet|dog|cat|animal) (?:vaccinations?|vaccines?)\b', '\bveterinary\b']
+
+prerequisites: []
+key_groups: []
+
+examples:
+  - {text: 'Anti-rabies vaccine available', match: exact}
+  - {text: 'Rabies immunoglobulin', match: exact}
+  - {text: 'Pet vaccination', match: confusable}
