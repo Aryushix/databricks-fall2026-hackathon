@@ -118,7 +118,10 @@ class TravelEstimate(_Model):
 
 class Recommendation(_Model):
     rank: int
-    list: Literal["verified", "unverified_fallback"]
+    # "nearest": emergencies only, the closest hospitals first (with any verified match they have);
+    # "verified": capability matches by status tier, then confidence band, then distance;
+    # "unverified_fallback": nearby facilities, capability not verified: call ahead
+    list: Literal["nearest", "verified", "unverified_fallback"]
     hospital_id: str
     hospital_name: Optional[str] = None
     facility_type: Optional[str] = None
@@ -127,6 +130,8 @@ class Recommendation(_Model):
     straight_line_distance_km: float
     travel: Optional[TravelEstimate] = None
     location_status: Optional[str] = None
+    listed_phone: Optional[str] = None          # from the facility listing; never checked by us
+    listed_phone_note: Optional[str] = None
     capability_match: bool
     matched_care_needs: list[MatchedNeed] = []
     unverified_signals: list[UnverifiedSignal] = []

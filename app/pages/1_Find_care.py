@@ -26,6 +26,8 @@ def show_recommendation(r) -> None:
         st.markdown(f"**{r.rank}. {r.hospital_name or r.hospital_id}** · {r.facility_type or 'facility'} · "
                     f"{r.straight_line_distance_km} km straight-line")
         st.write(r.explanation)
+        if r.listed_phone:
+            st.markdown(f"Phone: **{r.listed_phone}** ({r.listed_phone_note})")
         for w in r.warnings:
             st.caption(f"⚠ {w}")
         quotes = [(m, e) for m in r.matched_care_needs for e in m.evidence]
@@ -69,10 +71,16 @@ if submitted:
         st.write(resp.triage.reason + " " + resp.triage.advice)
         for q in resp.follow_up_questions:
             st.markdown(f"- {q}")
+        nearest = [r for r in resp.recommendations if r.list == "nearest"]
         verified = [r for r in resp.recommendations if r.list == "verified"]
-        fallback = [r for r in resp.recommendations if r.list != "verified"]
+        fallback = [r for r in resp.recommendations if r.list == "unverified_fallback"]
+        if nearest:
+            st.subheader("Nearest hospitals")
+            for r in nearest:
+                show_recommendation(r)
         if verified:
-            st.subheader("Facilities with matching verified capability")
+            st.subheader("Further away, with matching verified capability" if nearest
+                         else "Facilities with matching verified capability")
             for r in verified:
                 show_recommendation(r)
         if fallback:

@@ -261,6 +261,14 @@ With one required need, this is exactly mode 3's order, with confidence banded.
 8. **Location as PIN or city.** The challenge's users give a city, district or PIN. Proposal: after M3, accept an optional PIN or city resolved with `location_check.Directory`. The location is still supplied by the user, never inferred.
 9. **Who judges.** The human-judgment export (25 cases × top 5, two judges) is about 4 person-hours at roughly a minute per judgment. Labeling capacity from Phase 1 decision 3 is still open.
 
+### Decisions taken (2026-11-22)
+
+- **6.** Brian: ideally a clinician reviews this, but in an emergency getting the patient a result comes first. So emergencies list the nearest hospitals first, with any verified match they have, then verified matches further away, and an emergency always gets a result. Config: `search.emergency_nearest_first`, `search.emergency_always_result`.
+- **7.** Yes: `listed_phone`, labeled "not verified by us", never a number flagged `phone_shared_across_facilities`.
+- **8.** Coordinates only for now (default).
+- **Hindi review:** a human in the loop reviews the non-English patterns.
+- **9.** Still open: who judges the export.
+
 ## 10. Known limits
 
 - Recommendation quality is bounded by verifier precision, and LIKELY precision hasn't been measured. Example: one LIKELY cardiac catheterization record rests on a single line describing one patient's case, not a service the hospital offers. The human-judgment export is the check.

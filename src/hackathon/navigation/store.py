@@ -30,6 +30,7 @@ FACILITY_COLUMNS = ["unique_id", "name", "facilityTypeId", "specialties", "addre
                     "source_urls", "dup_group_id"]
 LOCATION_COLUMNS = ["unique_id", "resolved_latitude", "resolved_longitude", "location_status", "location_confidence"]
 OPTIONAL_LOCATION_COLUMNS = ["resolved_location_source"]
+OPTIONAL_FACILITY_COLUMNS = ["officialPhone", "dq_flags"]
 MAX_EVIDENCE = 2
 
 
@@ -61,8 +62,9 @@ class FileCapabilityStore:
     def __init__(self, facilities: pd.DataFrame, records: Iterable[dict], summary: Optional[dict] = None):
         df = facilities.copy()
         df["hospital_id"] = df["unique_id"]
-        if "resolved_location_source" not in df.columns:
-            df["resolved_location_source"] = None
+        for col in ("resolved_location_source", "officialPhone", "dq_flags"):
+            if col not in df.columns:
+                df[col] = None
         df["latitude"] = pd.to_numeric(df["resolved_latitude"], errors="coerce")
         df["longitude"] = pd.to_numeric(df["resolved_longitude"], errors="coerce")
         bad = ~(df.latitude.between(-90, 90) & df.longitude.between(-180, 180))
@@ -124,7 +126,8 @@ class FileCapabilityStore:
         if set(e.unique_id) != set(v.unique_id):
             raise DataError("facilities_enriched and facilities_verified have different unique_id sets")
         cols = LOCATION_COLUMNS + [c for c in OPTIONAL_LOCATION_COLUMNS if c in v.columns]
-        df = e[FACILITY_COLUMNS].merge(v[cols], on="unique_id", how="left", validate="one_to_one")
+        fcols = FACILITY_COLUMNS + [c for c in OPTIONAL_FACILITY_COLUMNS if c in e.columns]
+        df = e[fcols].merge(v[cols], on="unique_id", how="left", validate="one_to_one")
         summ = json.loads(Path(summary).read_text(encoding="utf-8")) if summary and Path(summary).exists() else None
         return cls(df, load_records(records), summ)
 

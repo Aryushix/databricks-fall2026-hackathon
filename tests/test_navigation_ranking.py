@@ -23,8 +23,11 @@ HEART = [CareNeed(id="emergency_department", role="required"),
          CareNeed(id="adult_icu_ventilation", role="supporting")]
 
 
-def rank(st, needs=DIALYSIS, urgency="routine", max_results=5):
-    return RANKER.rank(st, needs, urgency, P[0], P[1], max_results)
+BRIEF_ORDER = NavigationRanker({**CFG, "search": {**CFG["search"], "emergency_nearest_first": False}}, TABLE)
+
+
+def rank(st, needs=DIALYSIS, urgency="routine", max_results=5, ranker=RANKER):
+    return ranker.rank(st, needs, urgency, P[0], P[1], max_results)
 
 
 # ---------------------------------------------------------------- distance and coordinates
@@ -79,17 +82,42 @@ def test_not_confirmed_and_unverified_are_never_capability_matches():
     assert all("Capability not verified: call ahead." in r.warnings for r in fb)
 
 
-def test_emergency_property_farther_confirmed_outranks_nearer_non_match_randomised():
+def _random_layout(rnd):
+    facs, recs = [], []
+    for i in range(8):
+        km = rnd.uniform(0.5, 24)
+        status = rnd.choice(["CONFIRMED", "LIKELY", "NOT CONFIRMED", "UNVERIFIED"])
+        conf = None if status == "UNVERIFIED" else round(rnd.uniform(0.3, 0.99), 3)
+        facs.append(facility(f"f{i}", km))
+        recs.append(record(f"f{i}", "cardiac_catheterization", status, conf, km))
+    return facs, recs
+
+
+def test_emergency_nearest_first_randomised():
+    """Default (Brian, 2026-11-22): the closest hospitals come first, then verified matches; nothing repeats."""
+    rnd = random.Random(7)
+    for _ in range(200):
+        facs, recs = _random_layout(rnd)
+        out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency")
+        near = [r for r in out if r.list == "nearest"]
+        ver = [r for r in out if r.list == "verified"]
+        assert out[:len(near)] == near and len(near) == 3
+        assert [r.straight_line_distance_km for r in near] == sorted(r.straight_line_distance_km for r in near)
+        assert all(r.straight_line_distance_km >= near[-1].straight_line_distance_km for r in ver)
+        assert len({r.hospital_id for r in out}) == len(out)
+        for r in out:
+            assert r.capability_match == any(m.role == "required" and m.status in ("CONFIRMED", "LIKELY")
+                                             for m in r.matched_care_needs)
+        statuses = [r.matched_care_needs[0].status for r in ver]
+        assert statuses == sorted(statuses, key=lambda s: s != "CONFIRMED")
+
+
+def test_brief_order_property_farther_confirmed_outranks_nearer_non_match_randomised():
+    """With emergency_nearest_first off (the brief's order), the property from the brief holds."""
     rnd = random.Random(20261122)
     for _ in range(200):
-        facs, recs = [], []
-        for i in range(8):
-            km = rnd.uniform(0.5, 24)
-            status = rnd.choice(["CONFIRMED", "LIKELY", "NOT CONFIRMED", "UNVERIFIED"])
-            conf = None if status == "UNVERIFIED" else round(rnd.uniform(0.3, 0.99), 3)
-            facs.append(facility(f"f{i}", km))
-            recs.append(record(f"f{i}", "cardiac_catheterization", status, conf, km))
-        out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency")
+        facs, recs = _random_layout(rnd)
+        out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency", ranker=BRIEF_ORDER)
         seen_non_match = False
         for r in out:
             if r.capability_match:
@@ -103,7 +131,7 @@ def test_emergency_property_farther_confirmed_outranks_nearer_non_match_randomis
 def test_bands_emergency_vs_routine():
     facs = [facility("near", 3), facility("far", 12)]
     recs = [record("near", "hemodialysis", "LIKELY", 0.60, 3), record("far", "hemodialysis", "LIKELY", 0.72, 12)]
-    em, *_ = rank(store(facs, recs), urgency="emergency")
+    em, *_ = rank(store(facs, recs), urgency="urgent")
     assert [r.hospital_id for r in em if r.list == "verified"] == ["far", "near"]     # band 0.65 separates them
     rt, *_ = rank(store(facs, recs), urgency="routine")
     assert [r.hospital_id for r in rt if r.list == "verified"] == ["near", "far"]     # same band: distance decides
@@ -126,15 +154,29 @@ def test_widen_once_and_say_so():
     recs = [record("far", "hemodialysis", "LIKELY", 0.7, 40)]
     out, search, note, _ = rank(store(facs, recs), urgency="emergency")
     assert search.widened and search.radius_km == 50 and out[0].hospital_id == "far"
-    assert "widened once to 50 km" in note
-    out, search, note, _ = rank(store([facility("x", 80)], [record("x", "hemodialysis", "LIKELY", 0.7, 80)]), urgency="emergency")
-    assert out == [] and "No facility in our data is within 50 km" in note
+    assert "No verified match within 25 km, so the search for one was widened once to 50 km." in note
+    out, search, note, _ = rank(store([facility("x", 120)], [record("x", "hemodialysis", "LIKELY", 0.7, 120)]), urgency="urgent")
+    assert out == [] and "No facility in our data is within 100 km" in note
+
+
+def test_emergencies_always_get_a_result():
+    st = store([facility("remote", 250)], [record("remote", "cardiac_catheterization", "LIKELY", 0.7, 250)])
+    out, _, note, _ = rank(st, needs=HEART, urgency="emergency")
+    assert [r.hospital_id for r in out] == ["remote"] and out[0].list == "nearest" and out[0].capability_match
+    assert "The nearest hospital in our data is 250 km away" in note
+    assert rank(st, needs=HEART, urgency="routine")[0] == []
+    # beyond the cap (300 km) a listed hospital would mislead: no list, and the note says to call 112
+    out, _, note, _ = rank(store([facility("island", 1100)], []), needs=HEART, urgency="emergency")
+    assert out == [] and "No facility in our data is within 300 km" in note and "call 112" in note
 
 
 def test_fallback_always_for_emergency_and_capped_at_three():
     facs = [facility(f"h{i}", 1 + i) for i in range(6)] + [facility("v", 10)]
     recs = [record("v", "cardiac_catheterization", "CONFIRMED", 0.95, 10)]
     out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency", max_results=1)
+    assert [r.list for r in out] == ["nearest", "nearest", "nearest", "verified"]
+    assert [r.hospital_id for r in out] == ["h0", "h1", "h2", "v"]
+    out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency", max_results=1, ranker=BRIEF_ORDER)
     assert [r.list for r in out] == ["verified", "unverified_fallback", "unverified_fallback", "unverified_fallback"]
     out, *_ = rank(store(facs, recs), needs=DIALYSIS, urgency="routine", max_results=1)
     assert [r.list for r in out] == ["unverified_fallback"] * 3        # 0 verified < max_results: call-ahead list
@@ -224,6 +266,32 @@ def test_proxy_kb_explanation_never_implies_the_procedure():
     assert r.capability_match and r.matched_care_needs[0].via == "proxy_kb"
     assert "suggests a orthopedics department" in r.explanation.replace("an orthopedics", "a orthopedics")
     assert "doesn't mean you need that procedure" in r.explanation
+
+
+def test_nearest_hospital_with_a_verified_match_says_so():
+    facs = [facility("near", 1), facility("far", 20)]
+    recs = [record("near", "cardiac_catheterization", "LIKELY", 0.7, 1), record("far", "cardiac_catheterization", "CONFIRMED", 0.95, 20)]
+    out, *_ = rank(store(facs, recs), needs=HEART, urgency="emergency")
+    assert [(r.list, r.hospital_id, r.capability_match) for r in out] == [("nearest", "near", True), ("nearest", "far", True)]
+    assert out[0].explanation.startswith("Nearest hospital in our data; Likely cardiac catheterization")
+
+
+def test_a_supporting_need_alone_is_not_a_capability_match():
+    needs = [CareNeed(id="emergency_department", role="required"),
+             CareNeed(id="hemodialysis", role="supporting", verification_kb="hemodialysis")]
+    out, *_ = rank(store([facility("a", 1)], [record("a", "hemodialysis", "CONFIRMED", 0.95, 1)]), needs=needs, urgency="emergency")
+    assert out[0].matched_care_needs and not out[0].capability_match
+    assert "Capability not verified: call ahead." in out[0].warnings
+
+
+def test_listed_phone_is_labelled_and_shared_numbers_are_dropped():
+    own, shared = facility("own", 1), facility("shared", 2)
+    own["officialPhone"], shared["officialPhone"] = "+911100000001", "+911100000002"
+    shared["dq_flags"] = "coords_far_from_city;phone_shared_across_facilities"
+    out, *_ = rank(store([own, shared], []), needs=HEART, urgency="emergency")
+    by = {r.hospital_id: r for r in out}
+    assert by["own"].listed_phone == "+911100000001" and "not verified" in by["own"].listed_phone_note
+    assert by["shared"].listed_phone is None and by["shared"].listed_phone_note is None
 
 
 def test_explanation_and_no_travel_time():

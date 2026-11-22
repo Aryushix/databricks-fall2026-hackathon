@@ -139,15 +139,16 @@ def capability_and_coverage(cases: list[dict], navigator, locations: Iterable[tu
             for rec in r.recommendations:
                 checked += 1
                 statuses = [m.status for m in rec.matched_care_needs]
-                bad = (rec.list == "verified" and (not rec.capability_match or any(s not in eligible for s in statuses))) \
-                    or (rec.list != "verified" and rec.capability_match) or "CONTRADICTED" in statuses
+                bad = (rec.list == "verified" and not rec.capability_match) \
+                    or (rec.list == "unverified_fallback" and rec.capability_match) \
+                    or any(s not in eligible for s in statuses) or "CONTRADICTED" in statuses
                 if bad:
                     violations.append({"case": c["id"], "location": label, "hospital_id": rec.hospital_id})
             assessable = any(n.verification_kb or n.proxy_kbs for n in r.care_needs if n.role == "required")
             if assessable and r.search is not None:
                 s = cov.setdefault(c["id"], {"locations": 0, "within_radius": 0, "after_widening": 0})
                 s["locations"] += 1
-                has_verified = any(x.list == "verified" for x in r.recommendations)
+                has_verified = any(x.capability_match for x in r.recommendations)
                 s["within_radius"] += int(has_verified and not r.search.widened)
                 s["after_widening"] += int(has_verified)
     for s in cov.values():

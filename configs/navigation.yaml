@@ -73,6 +73,16 @@ search:
   # verification strength decides more often before distance does. Wider in routine: distance decides.
   band_edges: {emergency: [0.65, 0.80], urgent: [0.65, 0.80], routine: [0.80]}
   max_results_default: 5
+  # Emergencies (Brian, 2026-11-22: getting the patient a result comes first): the nearest hospitals are
+  # listed first, with any verified match they have, then verified matches further away. Set false for
+  # the brief's order (verified matches first, nearest after).
+  emergency_nearest_first: true
+  # Emergencies always get a result: if nothing is within the widened radius, show the nearest hospitals
+  # in our data at whatever distance, and say how far.
+  emergency_always_result: true
+  # ...up to this far. Beyond it a listed hospital would mislead (the Andaman Islands' nearest in our data is
+  # 1,163 km away on the mainland): the emergency block (call 112) is the answer, and the note says so.
+  emergency_always_result_max_km: 300
   fallback:
     max: 3                       # "nearby facilities, capability not verified: call ahead"
     always_for: [emergency]      # otherwise only when verified matches < max_results
@@ -112,4 +122,5 @@ warnings:
   approximate_location: "This facility's position is approximate (its PIN area), so the distance may be off."
   draft_kb: "The rules for checking {need} are still a draft."
   fallback: "Capability not verified: call ahead."
+  listed_phone: "Number from the facility listing, not verified by us."
   no_kb: "{need} can't be verified for any facility yet."
