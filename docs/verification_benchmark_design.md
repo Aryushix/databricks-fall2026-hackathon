@@ -3,6 +3,9 @@
 **Status: for review. Nothing is built yet.** This is step 1 of the Phase 4 brief. Work stops here until the
 decisions in section 14 are answered.
 
+**Revised 2026-11-22, 10:20 UTC.** The crawl has finished, so section 1 and every number derived from it now
+come from the final crawl (rule-pass run `240517db1f17`). The first version used a mid-crawl snapshot.
+
 The counts below are rule-pass status counts, **not accuracy**. There are no labels yet.
 
 ## 0. Summary
@@ -12,13 +15,17 @@ The counts below are rule-pass status counts, **not accuracy**. There are no lab
   - **B, synthetic stress set:** designed cases, marked `SYNTHETIC`.
   - **C, labels on real pairs:** *gold* labels come from humans and are the only source of reported precision,
     recall or calibration. *Silver* labels come from Claude and are for development only.
-- **The crawl re-run changes the sample.** The crawler was still writing to `crawl.sqlite` during this step.
-  - On a consistent copy taken at 06:25 UTC on 2026-11-22, 1,609 sites had crawled OK (393 in the earlier crawl).
-  - CONFIRMED rose from 6 / 46 / 83 / 34 to **49 / 218 / 437 / 164** (cardiac catheterization / hemodialysis /
-    emergency department / CT scan).
-  - Nobody has read the new CONFIRMED records yet.
-  - The gold sample is drawn only after the crawl finishes and the records are regenerated, and it is pinned to
-    that records file.
+- **The finished crawl changes the sample.**
+  - The crawl finished at 07:55 UTC on 2026-11-22: 5,213 of 8,060 sites crawled OK. The earlier crawl had 393,
+    and the 06:25 UTC snapshot 1,609.
+  - CONFIRMED rose from 6 / 46 / 83 / 34 (earlier crawl) to **88 / 472 / 995 / 362** (cardiac catheterization /
+    hemodialysis / emergency department / CT scan).
+  - Every treatment's CONFIRMED pool now clears 73, so none is "insufficient (pool)". Cath's 88 can pass the
+    0.95 test only with zero errors.
+  - The 1,049 records that became CONFIRMED after the snapshot haven't been reviewed. A random 40 of them
+    already show four patterns the KBs don't handle (§1.2).
+  - **New decision 10: when to freeze.** The gold sample is pinned to one records file. Freeze now on
+    `rules_v2`, or first fix those patterns and the crawler's decoding failures (§1.1) and freeze on `rules_v3`?
 - **What 2 judges × 3 hours buys: about 110 labeled pairs.** That assumes 2 minutes a pair and includes overlap,
   adjudication and error typing.
   - That is enough to test decision 2 on **one** treatment: CONFIRMED precision with a Wilson 95% lower bound
@@ -28,49 +35,142 @@ The counts below are rule-pass status counts, **not accuracy**. There are no lab
   inverse-probability weights. At these sample sizes it is an order-of-magnitude figure with a wide interval.
 - **Calibration is out of reach for now.** The proposed minimum is 300 gold pairs per treatment, and no plan
   smaller than 2 × 12 hours reaches it, so `heuristic_v1` stays.
-- **Three decisions the brief doesn't list:** what judges may look at (§5.2), how CANT_TELL counts (§5.1), and
-  rulings on seven places where `decide.py` and the docs differ or the docs are silent (§3.3). The audit needs a
-  ruling on each.
+- **Four decisions the brief doesn't list:** what judges may look at (§5.2), how CANT_TELL counts (§5.1),
+  rulings on seven places where `decide.py` and the docs differ or the docs are silent (§3.3; the audit needs a
+  ruling on each), and when to freeze the records (§1.3).
 
 ## 1. What the data looks like now
 
-Interim run:
-- inputs: `facilities_verified.csv` and the 06:25 UTC copy of `crawl.sqlite`;
-- rule pass `rules_v2`, all four KBs;
+Final run (`240517db1f17`):
+- inputs: `facilities_verified.csv` and `crawl.sqlite` as finished at 07:55 UTC;
+- rule pass `rules_v2`, all four KBs, code as of `e0f1ac2`;
 - 9,989 facilities, so 39,956 records.
 
-These numbers will move when the crawl finishes.
+The records, summary, run log and input hashes are in `~/hackathon-data/verification-final-20261122T1003Z/`.
 
 | Stratum | Cath | Hemodialysis | ED | CT |
 | --- | ---: | ---: | ---: | ---: |
-| CONFIRMED (all `DIRECT_OFFICIAL`) | 49 | 218 | 437 | 164 |
-| *same, with the earlier crawl* | *6* | *46* | *83* | *34* |
-| LIKELY · direct claim, extracted only (`DIRECT_SINGLE_ORIGIN`) | 194 | 765 | 2,112 | 1,107 |
-| LIKELY · official page, score under the threshold (`DIRECT_OFFICIAL`) | 19 | 19 | 60 | 23 |
-| LIKELY · chain site only | 8 | 26 | 36 | 15 |
-| LIKELY · via key prerequisites (`PREREQS_MET`; 4 cath records also fail the facility-type gate) | 92 | 20 | 0 | 0 |
-| NOT CONFIRMED · confusable only | 207 | 11 | 389 | 560 |
-| NOT CONFIRMED · other entity | 78 | 74 | 93 | 95 |
-| NOT CONFIRMED · implausible facility type | 41 | 0 | 262 | 9 |
-| NOT CONFIRMED · stale | 4 | 33 | 82 | 27 |
-| NOT CONFIRMED · mention only | 125 | 17 | 16 | 14 |
-| NOT CONFIRMED · key prerequisites missing | 83 | 0 | 0 | 0 |
-| NOT CONFIRMED · copied, chain, conflict, planned, ambiguous entity, camp, partial negative | 15 | 23 | 26 | 28 |
-| CONTRADICTED | 0 | 0 | 5 | 10 |
-| UNVERIFIED · prerequisites only | 2,485 | 1,374 | 539 | 2,034 |
-| UNVERIFIED · no evidence, but the record touches the area (screen hit) | 496 | 398 | 1,426 | 965 |
-| UNVERIFIED · no evidence and no screen hit | 6,093 | 7,011 | 4,506 | 4,938 |
+| CONFIRMED (all `DIRECT_OFFICIAL`) | 88 | 472 | 995 | 362 |
+| *same, 06:25 UTC snapshot* | *49* | *218* | *437* | *164* |
+| *same, earlier crawl* | *6* | *46* | *83* | *34* |
+| LIKELY · direct claim, extracted only (`DIRECT_SINGLE_ORIGIN`) | 177 | 604 | 1,650 | 968 |
+| LIKELY · official page, score under the threshold (`DIRECT_OFFICIAL`) | 41 | 54 | 179 | 60 |
+| LIKELY · chain site only | 8 | 32 | 51 | 19 |
+| LIKELY · via key prerequisites (`PREREQS_MET`; 5 cath records also fail the facility-type gate) | 105 | 18 | 0 | 0 |
+| LIKELY · a positive outranks a negative (`CONFLICT_RESOLVED_POSITIVE`) | 0 | 0 | 0 | 1 |
+| NOT CONFIRMED · confusable only | 227 | 14 | 478 | 751 |
+| NOT CONFIRMED · other entity | 89 | 82 | 116 | 108 |
+| NOT CONFIRMED · implausible facility type | 49 | 0 | 362 | 12 |
+| NOT CONFIRMED · stale | 4 | 28 | 73 | 24 |
+| NOT CONFIRMED · mention only | 139 | 22 | 32 | 29 |
+| NOT CONFIRMED · key prerequisites missing | 75 | 0 | 0 | 0 |
+| NOT CONFIRMED · copied, chain, conflict, planned, ambiguous entity, camp, partial negative | 17 | 26 | 32 | 25 |
+| CONTRADICTED | 0 | 0 | 7 | 9 |
+| UNVERIFIED · prerequisites only | 2,460 | 1,360 | 495 | 1,978 |
+| UNVERIFIED · no evidence, but the record touches the area (screen hit) | 439 | 384 | 1,188 | 908 |
+| UNVERIFIED · no evidence and no screen hit | 6,071 | 6,893 | 4,331 | 4,735 |
 
 How to read the table:
-- **Screen hit** is a broad keyword net over the whole record, wider than the KB. For hemodialysis it is
-  `kidney|renal|nephr|dialy`. It is used only to stratify UNVERIFIED pairs for recall sampling, never as
-  evidence. KB misses will concentrate there.
-- **The threshold fit depends on records just under the threshold.** Under the 0.90 threshold sit 60 ED records,
-  and 23 for CT, that have an official-page claim but a score of 0.82–0.89, so their status is LIKELY.
+- **Screen hit** is a broad keyword net over the record's name, description, specialties, procedure, equipment
+  and capability fields, wider than the KB. It is used only to stratify UNVERIFIED pairs for recall sampling,
+  never as evidence. KB misses will concentrate there. The terms (case-insensitive):
+  - hemodialysis `kidney|renal|nephr|dialy`;
+  - cath `cardi|heart|coronar|angio|\bcath`;
+  - ED `emergenc|casualty|trauma|accident|24\s*[x/]\s*7|round the clock`;
+  - CT `\bct\b|c\.t\.|computed tomograph|\bcat scan|radiolog|imaging|scan`.
+
+  The first version's cath, ED and CT terms were slightly different, so its screen-hit counts aren't comparable
+  with these.
+- **The threshold fit depends on records just under the threshold.** Under the 0.90 threshold sit 179 ED, 60 CT,
+  54 hemodialysis and 41 cath records that have an official-page claim but a lower score, so their status is
+  LIKELY. Their scores run 0.85–0.89 (ED), 0.82–0.89 (CT), 0.67–0.87 (hemodialysis) and 0.63–0.90 (cath).
   Section 9.6 needs labels on them.
-- **505 records have a truncated evidence list** (more than 8 items in one list), so the audit can't recount
+- **What moved since the snapshot.** 780 LIKELY → CONFIRMED, 213 UNVERIFIED → CONFIRMED, 56 NOT CONFIRMED →
+  CONFIRMED, 579 UNVERIFIED → NOT CONFIRMED, 229 UNVERIFIED → LIKELY, and 37 other flips. The 56 that went
+  from NOT CONFIRMED to CONFIRMED are pairs where a new official page outranks the earlier reason. They are
+  worth reading first.
+- **Facility types among CONFIRMED.** Cath and ED: all hospitals. CT: 283 hospitals and 79 clinics.
+  Hemodialysis: 453 hospitals and 19 clinics.
+- **758 records have a truncated evidence list** (more than 8 items in one list), so the audit can't recount
   them from the record alone (§3.2).
-- **The cells are uneven:** 195 cells are non-empty and 74 of them hold fewer than 5 pairs.
+- **The cells are uneven:** 195 cells are non-empty, and 57 of them hold fewer than 5 pairs (107 pairs in all).
+
+### 1.1 The crawl
+
+Of 8,060 sites, 5,213 crawled OK and 2,847 did not. The first cause recorded for each failure:
+
+| Cause | Sites |
+| --- | ---: |
+| robots.txt unreachable after one retry (mostly connection errors), so the site isn't crawled (RFC 9309) | 1,984 |
+| `DecodingError` on the page | ~390 |
+| HTTP error on the page (403, 404, 409, 5xx …) | 315 |
+| robots.txt disallows us | 68 |
+| robots.txt returns a server error | 65 |
+| other network errors | 24 |
+
+- **Unreachable robots.txt.** Most of these look like dead or unreachable hosts. The DB can't tell whether some
+  failures came from the crawling machine's own network.
+- **`DecodingError`.** 802 pages on 422 different hosts had a body that didn't decode under its
+  `Content-Encoding`.
+  - The likely cause is on our side, because so many unrelated hosts fail the same way. The crawler sets no
+    `Accept-Encoding`, so httpx advertises whatever decoders that Python environment has: gzip and deflate
+    always, br and zstd only when `brotli` or `zstandard` is installed.
+  - Proposed fix, not made, on its own branch:
+    - send `Accept-Encoding: gzip, deflate`;
+    - on `DecodingError`, retry once with `identity`;
+    - re-crawl only the failed sites.
+  - This can't be tested from the workspace, which can't reach these sites.
+  - Up to about 390 more sites is a ceiling, not a forecast.
+
+### 1.2 A first read of the new CONFIRMED records (development, not a measurement)
+
+1,049 records became CONFIRMED after the snapshot, and nobody has reviewed them. I read a random 40, 10 per
+treatment (seed 7). The pair ids are in `~/hackathon-data/benchmark/dev_reads/20261122_new_confirmed_read40.csv`.
+Four of the 40 show patterns the KBs or rules don't handle:
+
+| # | Treatment | Pattern | Likely fix |
+| --- | --- | --- | --- |
+| P1 | ED | An emergency line for one specialty (maternity) whose wording isn't in the confusables; the KB covers "obstetric" | widen the ED specialty-emergency confusable |
+| P2 | ED | An FAQ heading phrased as a question about emergency care, classified `OFFERED` | a question is `AMBIGUOUS` unless the next line answers it |
+| P3 | CT | A dental clinic's line naming a CT scan and CBCT together. Confusables block only overlapping spans (`kb.py`), so the CT term still counts | let `cone_beam_ct` suppress the whole claim, and add dental CT to it |
+| P4 | Hemodialysis | A single-specialty unit whose official site is the hospital group's site, which lists the service | treat a group site naming many units like a chain domain, or flag a specialty-unit name against a service outside its specialty |
+
+This is an unlabelled reading by the author of the rules, so it is not an error rate and won't be reported as
+one. It is enough to say that a gold set drawn now would spend part of its budget measuring these known
+patterns. That's the reason for decision 10.
+
+### 1.3 When to freeze the records (decision 10)
+
+Precision, recall and calibration hold for one records file, and the gold sample is drawn from it. Freezing
+means pinning that file. Pairs read during rule development can't be counted as an independent test of the
+rules they shaped.
+
+- **(a) Freeze now** on `240517db1f17` (`rules_v2`).
+  - Gold then measures today's verifier as it stands.
+  - It is the fastest route to a first number, but part of the labeling budget measures P1–P4.
+- **(b) One development round first (proposed):**
+  1. fix the crawler's decoding problem and re-crawl only the failed sites;
+  2. `rules_v3` for P1–P4, each with a stress case (§4);
+  3. a second development read with silver (step 5 of the brief, moved earlier), on pairs outside the gold
+     frame;
+  4. re-run, freeze and draw the gold sample.
+
+  This costs about half a day of work and one crawl of about 390 sites.
+- **The gold frame excludes pairs used to tune the rules, under either option.** These pairs are:
+  - every CONFIRMED record of the earlier crawl that was read in Phases 2–3;
+  - the LIKELY samples read in those phases, where their ids are known;
+  - the 40 pairs in §1.2;
+  - anything read during option (b).
+
+  The report states that the precision claim covers CONFIRMED records *other than* the N used for tuning, and
+  gives N.
+  - The earlier crawl's CONFIRMED set can be rebuilt by re-running `rules_v2` on the crawl DB restricted to
+    pages fetched before the re-run (`fetched_at` < 2026-11-22T05:00Z).
+  - The wave A LIKELY sample ids weren't saved, so they can't be excluded. The report says so.
+- **The development read uses a separate split.** Before the second development read, a seeded random half of
+  facilities is set aside as the gold frame, and development reads only the other half.
+  - One exception: if a treatment's held-out CONFIRMED pool would drop under 73 (cath: 88 minus the tuning
+    pairs), its whole pool is held out and nobody reads its CONFIRMED records until gold is done.
 
 ## 2. Layers and tiers
 
@@ -113,7 +213,7 @@ Each check re-derives the value from the inputs without calling the code that pr
 
 ### 3.2 Truncated evidence
 
-Records list at most 8 items per evidence list, so A4 and A5 can't be recomputed exactly for the 505 records
+Records list at most 8 items per evidence list, so A4 and A5 can't be recomputed exactly for the 758 records
 that have more.
 
 **Proposal:** an additive option `run --write-evidence` that writes `evidence.jsonl.gz`, holding every evidence
@@ -130,10 +230,10 @@ Comparing `decide.py` with the current docs turned up seven gaps:
 | # | Docs say | `decide.py` does | Proposed ruling |
 | --- | --- | --- | --- |
 | G1 | CONFIRMED needs "an OFFERED claim on the facility's own website" | also accepts `PARTNER_ON_SITE` | code (decision 1 counts partner-run on site); fix the docs |
-| G2 | LIKELY needs "a plausible facility type … or every key prerequisite documented" (ambiguous) | the prerequisite path gives LIKELY even for an implausible type, with a review flag (4 cath records) | code; document it |
-| G3 | the status rules don't mention staleness | stale positives don't count, so the status becomes NOT CONFIRMED · `STALE` (146 records have it as the main reason) | code; document it |
+| G2 | LIKELY needs "a plausible facility type … or every key prerequisite documented" (ambiguous) | the prerequisite path gives LIKELY even for an implausible type, with a review flag (5 cath records) | code; document it |
+| G3 | the status rules don't mention staleness | stale positives don't count, so the status becomes NOT CONFIRMED · `STALE` (129 records have it as the main reason) | code; document it |
 | G4 | only the undated tie is described | a positive that outranks the negative continues to CONFIRMED/LIKELY with `CONFLICT_RESOLVED_POSITIVE` | code; document it |
-| G5 | a chain site "describes the chain, not the branch" | chain-page positives can reach LIKELY (`CHAIN_SITE_ONLY`, 85 records), never CONFIRMED | code; document it |
+| G5 | a chain site "describes the chain, not the branch" | chain-page positives can reach LIKELY (`CHAIN_SITE_ONLY`, 110 records), never CONFIRMED | code; document it |
 | G6 | no main reason defined | the first code is the de facto main reason | write the order into the spec (sampling depends on it) |
 | G7 | silent | if the **model** pass labels an *ambiguous-term* match `OFFERED`, the item is listed in `direct_evidence` but never counts toward origins or status (the rule pass converts it to `AMBIGUOUS`, `parse_llm_output` doesn't) | fix in code: treat it as `AMBIGUOUS`, plus a test. This only matters under `--llm` |
 
@@ -157,7 +257,9 @@ record ids; I won't quietly align the spec to the code.
   - put the summary off by one.
 
   An audit that can't fail proves nothing.
-- **Real run (step 2):** on the final records, with the report in `~/hackathon-data/benchmark/audit/<run_id>/`.
+- **Real run (step 2):** on the frozen records (decision 10), with the report in
+  `~/hackathon-data/benchmark/audit/<run_id>/`. The audit can also run on `240517db1f17` right away, since it
+  checks consistency, not accuracy.
 
 ## 4. B. Synthetic stress set
 
@@ -338,8 +440,12 @@ error-typing pass** assigns the type: one judge, about 2 minutes a pair. It is c
   - `manifest.json`: `label_set_version` (`lsv1-YYYYMMDD-<records sha8>`), file hashes, KB versions,
     config hash, seed and plan.
   - A manifest is never overwritten: a new draw is a new version.
+- **The frame** is the frozen records file minus the tuning pairs, within the held-out half where there is one
+  (§1.3).
 - **Insufficient.**
   - A treatment whose CONFIRMED pool is under 73 is reported as **insufficient (pool)**.
+    - On the final crawl no treatment is. The smallest pool is cath's 88, less its tuning pairs.
+    - Labeling all of cath's pool passes only with zero errors: 88 of 88 gives 0.958, and 87 of 88 gives 0.938.
   - A treatment whose pool is big enough but whose labeled n is too small is **not tested (capacity)**.
   - Treatments are never pooled silently. A pooled figure appears only on its own line, labeled pooled.
 
@@ -366,6 +472,7 @@ c = m(1 + f) + f·d·2a + e·t. The terms:
 | 2 × 6 h | 298 | 236 | 166 |
 | 2 × 8 h | 403 | 319 | 225 |
 | 2 × 12 h | 614 | 486 | 343 |
+| 2 × 17 h | 877 | 694 | 490 |
 
 The value of m is a guess:
 - Evidence rows show a few quotes and a link.
@@ -400,12 +507,18 @@ What each plan buys, at m = 2.0:
   - Plus, per treatment: 20 LIKELY (10 of them from the official-page-under-threshold group, for §9.6),
     10 NOT CONFIRMED, 10 UNVERIFIED screen hit and 5 UNVERIFIED with nothing.
   - Plus about 10 navigation certainty pairs.
-- **Full first gold set, all four treatments (~880 pairs): about 2 × 22 h.** Cardiac catheterization may still be
-  insufficient (pool).
+- **Full first gold set, all four treatments (~700 pairs): about 2 × 17 h.**
+  - CONFIRMED: 142 pairs each for ED, hemodialysis and CT (two errors tolerated), and cath's whole pool (zero
+    errors).
+  - Plus 45 others per treatment as in 8a, and about 10 navigation pairs.
 
-**Recall stays rough at every plan.** At plan 8a an UNVERIFIED screen-hit pair carries a weight of about 40–140
-(1,426 ED pairs ÷ 10 sampled). One YES found there moves the recall estimate a lot, so recall is reported with a
+**Recall stays rough at every plan.** At plan 8a an UNVERIFIED screen-hit pair carries a weight of about 40–120
+(1,188 ED pairs ÷ 10 sampled). One YES found there moves the recall estimate a lot, so recall is reported with a
 bootstrap interval and called an order-of-magnitude estimate.
+
+**The held-out half (§1.3, option b) still fits these plans.** After tuning pairs are removed, the held-out half
+holds about 450 ED, 210 hemodialysis and 160 CT CONFIRMED pairs, so every plan's CONFIRMED quota fits. Cath is
+held out whole.
 
 ## 8. Labeling workflow
 
@@ -491,7 +604,7 @@ adjudication sheet puts disagreements side by side.
    ```
 
    For each labeled pair it lists status A, status B and gold, and marks each flip right, wrong or neutral. It
-   also counts flips across the whole population. Uses: the interim vs final crawl, `rules_v2` vs `rules_v3`,
+   also counts flips across the whole population. Uses: the snapshot vs final crawl, `rules_v2` vs `rules_v3`,
    before and after a KB change.
 
    Labels judge pairs, not statuses, so they survive rule changes. They are tied to an evidence snapshot, though:
@@ -507,7 +620,7 @@ adjudication sheet puts disagreements side by side.
 - only 8 rows carry a verified match, all hemodialysis.
 
 **Plan.**
-1. After the final records exist, re-run the navigation evaluation.
+1. Once the records are frozen, re-run the navigation evaluation on them. It last ran on the earlier crawl.
 2. Put the (hospital, KB) pairs behind verified matches into the gold sample as a certainty stratum (π = 1,
    capped at 40).
 3. Once both sheets are judged, join on (`hospital_id`, `kb_id`): navigation judgment (appropriate y/n) ×
@@ -555,7 +668,9 @@ Each new subcommand goes on the existing CLI: `audit`, `stress`, `sample`, `capa
 
 ## 13. Assumptions
 
-1. The crawl finishes and the records are regenerated before step 2. All interim numbers here will move.
+1. The crawl has finished (07:55 UTC, 2026-11-22), and section 1 uses records regenerated on it (run
+   `240517db1f17`). Those records aren't frozen yet: decision 10 picks the file gold is drawn from. Step 2's audit
+   runs on whichever file that is.
 2. Labels judge documentary evidence, not real availability.
 3. The rule pass (`rules_v2`) is the classifier under test. The model pass hasn't run on the endpoint, so
    evidence-level comparisons wait for it.
@@ -570,6 +685,10 @@ Each new subcommand goes on the existing CLI: `audit`, `stress`, `sample`, `capa
 9. Silver sees the sheet only; gold may also open live sites (§5.2).
 10. Only `heuristic_v1` exists until calibration clears the minimum n. No score is called a probability before
     then.
+11. Pairs read while tuning the rules are outside the gold frame (§1.3). The precision claim covers the rest,
+    and the report says how many pairs were excluded.
+12. The crawler's `DecodingError` failures come from the client's `Accept-Encoding`. This is a hypothesis until
+    a re-crawl of those sites tests it (§1.1).
 
 ## 14. Decisions (proposed answers)
 
@@ -579,8 +698,9 @@ Each new subcommand goes on the existing CLI: `audit`, `stress`, `sample`, `capa
 | 2 | Who the judges are | you plus one teammate who hasn't worked on the KBs. A clinician, if available, reviews the guide's boundary cases and adjudicates cath/ED disagreements (< 1 h), but isn't a primary judge | independence; the clinical boundary calls |
 | 3 | Pre-labels | **blind on every CONFIRMED pair tested against 0.95**; 80% shown / 20% blind elsewhere, randomized within cell | keeps the 0.95 claim free of anchoring. At these sizes the 20% blind group detects only large anchoring effects |
 | 4 | Silver judge | `databricks-claude-sonnet-5-5`; fallback `databricks-claude-opus-5-5` or another non-gpt-oss endpoint | correlation with the classifier |
-| 5 | Treatments in the first gold set | **ED and hemodialysis**: the largest CONFIRMED pools, the emergency path, and the most common verified match in navigation. Cath and CT get silver only for now ("not tested"); cath is "insufficient" if its final CONFIRMED pool is under 73 | the sample plan |
+| 5 | Treatments in the first gold set | **ED and hemodialysis**: the largest CONFIRMED pools (995 and 472), the emergency path, and the most common verified match in navigation. Cath and CT get silver only for now ("not tested"). Cath's pool of 88 can be tested later, but passes only if all of it is right | the sample plan |
 | 6 | Phone verification | **No** | labels stay documentary |
 | 7 | *(new)* What judges may look at | **sheet plus live official site and the record's source pages**, no web search, about 3 min cap, `evidence_basis` recorded | what YES means for extracted-only LIKELY |
 | 8 | *(new)* CANT_TELL for CONFIRMED | **counts as an error (strict)**; LIKELY is reported as a distribution | the 0.95 test |
 | 9 | *(new)* Decision-table gaps G1–G7 | docs follow code for G1–G6; fix G7 in code, with a test | what the audit's A5 enforces |
+| 10 | *(new)* When to freeze the records | **(b): one development round first.** Crawler decoding fix and re-crawl of the ~390 failed sites; `rules_v3` for P1–P4 with stress cases; a silver-assisted read outside a held-out half; then freeze and draw gold. Under either option, tuning pairs stay out of the gold frame | whether the first gold number measures `rules_v2` or `rules_v3`; about half a day |
