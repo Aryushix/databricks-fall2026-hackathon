@@ -1,5 +1,11 @@
 # Symptom navigation
 
+> **2026-11-22: the app now searches by service, not symptoms.** The users are community and NGO workers, so
+> the "Find care" page and the API (`GET /services`, `POST /find-facilities`, `GET /resolve-location`) take a
+> service and a place. They use the ranking, the location lookup and the evidence described below, with no
+> symptom reading, triage or emergency block. The symptom pipeline (red flags, extraction, care needs) stays in
+> `src/hackathon/navigation` with its tests, but nothing in the app calls it.
+
 A person describes their pain or symptoms in plain language and says where they are: a town, district or PIN code
 (or coordinates). The service returns:
 

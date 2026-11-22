@@ -26,6 +26,9 @@ from .contract import (
     RecommendRequest,
     RecommendResponse,
     SearchInfo,
+    ServiceInfo,
+    ServiceRequest,
+    ServiceResponse,
     SymptomAnalysis,
     Triage,
     Versions,
@@ -217,6 +220,49 @@ class Navigator:
         resp.versions.verification_run = versions.get("verification_run")
         if self.mapper is not None:
             resp.versions.care_needs = self.mapper.version
+
+    # ------------------------------------------------------------------ service search
+    def services(self) -> list[ServiceInfo]:
+        """Every service a user can search for, the verifiable ones first."""
+        if self.mapper is None:
+            return []
+        out = [ServiceInfo(id=n, name=self.mapper.name(n), verifiable=self.mapper.verification_kb(n) is not None)
+               for n in self.mapper.needs]
+        return sorted(out, key=lambda s: (not s.verifiable, s.name.lower()))
+
+    def find_service(self, req: ServiceRequest) -> ServiceResponse:
+        """Facilities near a point for one service: verified matches by status tier, confidence band and
+        distance, then a "capability not verified, call ahead" list. No symptoms, no triage, no model."""
+        if self.mapper is None or req.service not in self.mapper.needs:
+            raise ValueError("unknown service")
+        rid = uuid.uuid4().hex
+        kb = self.mapper.verification_kb(req.service)
+        need = CareNeed(id=req.service, role="required", verification_kb=kb, proxy_kbs=self.mapper.proxy_kbs(req.service))
+        resp = ServiceResponse(request_id=rid, service=req.service, service_name=self.mapper.name(req.service),
+                               verifiable=kb is not None, disclaimer=self.cfg.get("service_disclaimer", ""),
+                               versions=Versions(navigation=str(self.cfg.get("navigation_version")),
+                                                 care_needs=self.mapper.version))
+        if not in_coverage(req.latitude, req.longitude, self.cfg["coverage"]["bbox"]):
+            resp.coverage_note = "This location is outside the area our facility data covers (India)."
+            return resp
+        reasons: list[str] = []
+        try:
+            store = self.store_provider() if self.store_provider else None
+            if store is None or self.ranker is None:
+                raise RuntimeError("no data")
+            recs, search, note, versions = self.ranker.rank(store, [need], "routine", req.latitude, req.longitude,
+                                                            req.max_results)
+            resp.recommendations, resp.search = recs, search
+            resp.coverage_note = (note or "").replace(" If this may be an emergency, call 112.", "") or None
+            resp.versions.kb = versions.get("kb")
+            resp.versions.verification_run = versions.get("verification_run")
+        except Exception:
+            log.exception("service search failed (request %s)", rid)
+            reasons.append("data_unavailable")
+        resp.degraded, resp.degraded_reasons = bool(reasons), reasons
+        log.info("request=%s service=%s results=%d degraded=%s", rid, req.service, len(resp.recommendations),
+                 ",".join(reasons) or "-")
+        return resp
 
     # ------------------------------------------------------------------ health
     def health(self) -> dict:

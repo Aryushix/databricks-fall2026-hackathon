@@ -17,7 +17,7 @@ A build that can't explain itself doesn't meet the requirements, however good it
 
 - [ ] Runs on **Databricks Free Edition**
 - [x] Uses the **provided facility dataset** (`databricks_virtue_foundation_dataset_dais_2026`): `00b` copies it, and every table and result is built from it
-- [x] Clear **non-technical user workflow**: the "Find care" page. Type the problem in your own words (English or Hindi) and a town, district or PIN code
+- [x] Clear **non-technical user workflow**: the "Find care" page. Pick a service, type a town, district or PIN code, and get a ranked list
 - [x] **Cites the underlying facility text** (`description`, `source_urls`) for every important claim, score, or ranking: each pick shows the exact quote behind it, the page it came from or the listing's `source_urls`, and why it ranks where it does
 - [x] **Communicates uncertainty** instead of presenting weak evidence as fact: a status per match (CONFIRMED / LIKELY), confidence bands rather than percentages, warnings for doubtful data, a separate "capability not verified, call ahead" list, and how precise the location is
 
@@ -47,4 +47,4 @@ About 10,000 facilities with 51 attributes, mostly **extracted from web text**. 
 | Match a service to a facility's claims, with the supporting text | In progress: cardiac catheterization, hemodialysis, emergency department and CT scan | `src/hackathon/verification`, `docs/TREATMENT_VERIFICATION.md` |
 | Score and rank (evidence strength × distance × data quality) | Done: tiered ranking by verified status, confidence band, then distance; location problems become warnings | `verification/query.py` (query mode 3), `navigation/rank.py`, `docs/SYMPTOM_NAVIGATION.md` |
 | Explain each pick: quotes from `description`, `source_urls`, and an uncertainty note | Done: verbatim quotes, source or `source_urls`, warnings and a templated explanation per pick | `navigation/rank.py` |
-| Non-technical front end | Built: "Find care" page in the Streamlit app (town or PIN input), plus an API. Deploying as a Databricks App | `app/pages/1_Find_care.py`, `navigation/api.py` |
+| Non-technical front end | Built: "Find care" page in the Streamlit app (service + town or PIN), plus an API. Deploying as a Databricks App | `app/pages/1_Find_care.py`, `navigation/api.py` |

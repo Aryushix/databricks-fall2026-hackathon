@@ -2,7 +2,7 @@
 
 > **CMU Datathon, Fall 2026: Find the right care.** Given a service (dialysis, emergency C-section, NICU, MRI…) and a location in India, recommend the best facilities and show the evidence behind each pick. Brief and checklist: [`docs/CHALLENGE.md`](docs/CHALLENGE.md).
 >
-> **What we built:** "Find care", a page where a community health worker or NGO coordinator types a patient's problem in their own words (English or Hindi) and a town or PIN code. It gets the nearby facilities whose capability we could verify, each with the exact quote and link behind it and how sure we are. In an emergency, the 112 / 108 instructions come first.
+> **What we built:** "Find care", a page where a community health worker or NGO coordinator picks a **service** (dialysis, cath lab, emergency department, CT, and 21 more) and types a **town, district or PIN code**. It gets nearby facilities, ranked by how well documented evidence supports that the facility offers the service, each with the exact quote and link behind it and how sure we are.
 
 | Teammate | GitHub | Working on |
 | --- | --- | --- |
@@ -11,7 +11,87 @@
 | Tanisha | TanishaKr07 | Care Finder orchestrator backend (`app/carefinder`, branch `tanisha/orchestrator`) |
 | Abdullah | TODO | Care Finder React frontend and chatbot |
 
-**In one line:** we copy the Virtue Foundation health data into our own Databricks schema, clean it (flagging every doubtful value instead of hiding it), join it into tables that answer "where should this patient go?", and show each answer with its evidence.
+**In one line:** we copy the Virtue Foundation health data into our own Databricks schema, clean it (flagging every doubtful value instead of hiding it), check every facility's location, verify service claims against each facility's own website, and show each answer with its evidence.
+
+## How it works
+
+```mermaid
+flowchart LR
+  D["Virtue Foundation<br/>10,000 facilities"] --> C["Clean + flag<br/>(01)"]
+  C --> L["Location check<br/>vs India Post (01b)"]
+  W["Facilities' own websites<br/>(crawler, 5,213 sites)"] --> V
+  L --> V["Treatment verifier<br/>(batch, in advance)"]
+  V --> R[("One record per<br/>facility × service")]
+  U["Worker: service +<br/>town / PIN"] --> F["Find care<br/>page / API"]
+  R --> F
+```
+
+1. **Clean** (`01_clean_facilities`): 9,989 facilities, with a `dq_flags` column naming every doubtful value instead of hiding it. See `docs/DATA_CLEANING.md`.
+2. **Check locations** (`01b_verify_locations`): each facility's PIN, city and coordinates are compared with India Post. The result is a point to measure from and a `location_confidence`. See `docs/LOCATION_CHECKS.md`.
+3. **Crawl** (laptop only, `tools/facility_crawler.py`): we fetched each facility's own website, respecting `robots.txt`. 5,213 of 8,060 sites returned pages.
+4. **Verify services in advance** (`src/hackathon/verification`; laptop CLI or notebook `07`):
+   - Every facility × service pair gets one record: a status, a confidence score, the exact quotes behind it and their sources. That's 39,956 records for 4 services.
+   - The app only looks these records up. Nothing is verified at request time.
+   - Each verifiable service has a knowledge base (`src/hackathon/verification/kb/*.yaml`): the names that count, look-alikes that don't (CT angiography isn't a cath lab), and negations, outsourcing and referrals.
+   - Statuses:
+     - **CONFIRMED**: the facility's own website offers it, and the score is ≥ 0.90.
+     - **LIKELY**: the dataset's text says so, but no website check passed.
+     - **NOT CONFIRMED**: only look-alikes, another facility, or stale claims.
+     - **CONTRADICTED**: a credible "not offered", "outsourced" or "discontinued".
+     - **UNVERIFIED**: no evidence.
+5. **Find care** (`app/pages/1_Find_care.py`, API in `navigation/api.py`):
+   - The town or PIN becomes a point through India Post. Names in several states ask which one.
+   - Verified facilities are ranked by status (CONFIRMED before LIKELY), then confidence band, then straight-line distance. The search is 100 km, widened once to 150 km.
+   - Then comes a "call to check" list of nearby facilities whose capability isn't verified.
+
+**Confidence** (`heuristic_v1`, `configs/verification.yaml`) is a hand-weighted log-odds score:
+
+```
+logit = prior(service, facility type)
+      + 3.0 × Σ over independent sources of the strongest positive claim's strength
+      − 3.0 × Σ over independent sources of the strongest negative claim's strength
+      + min(2.4, prerequisites)
+score = 1 / (1 + e^−logit)
+```
+
+A claim's strength = claim type × source reliability (own website 1.0, dataset text 0.5) × wording precision × recency × "is it this facility". The weights are set by hand, not fitted to labels, so the score orders results and isn't a probability. The page shows it as bands, and dataset text alone can never reach CONFIRMED. Details are in `docs/TREATMENT_VERIFICATION.md`.
+
+**Numbers so far (counts and consistency checks, not accuracy):**
+
+| Service | CONFIRMED | LIKELY | NOT CONFIRMED | UNVERIFIED |
+| --- | ---: | ---: | ---: | ---: |
+| Emergency department | 995 | 1,880 | 1,093 | 6,014 |
+| Hemodialysis | 472 | 708 | 172 | 8,637 |
+| CT scan | 362 | 1,048 | 949 | 7,621 |
+| Cardiac catheterization | 88 | 331 | 600 | 8,970 |
+
+- **Coverage:** at 71 sampled India Post locations (2 per state), a verified dialysis facility is within 100 km for 83% of them (92% within 150 km). For the emergency test cases, a verified match (mostly an emergency department) is within 50 km for 89–90%.
+- **Consistency:** every recommendation's status matched the verifier's record (7,451 of 7,451).
+- **Tests:** 400 automated tests pass.
+- **Accuracy is not measured yet:** that needs people to label a sample. The plan is in `docs/verification_benchmark_design.md`.
+
+**Known limits:**
+- Only 4 services can be verified; the other 21 get the call-to-check list.
+- Only about half the facilities have a crawlable website, so the rest can't be CONFIRMED.
+- Distances are straight-line, not road.
+- A result describes documented evidence. It isn't a guarantee that a service is available today.
+
+### Run the demo
+
+- **On Databricks:**
+  1. Put `facilities_enriched.csv`, `facilities_verified.csv`, `verification/records.jsonl.gz` and `verification/summary.json` in `/Volumes/workspace/hackathon/raw/navigation/`.
+  2. Create a Databricks App from this Git folder (`app.yaml` is ready).
+  3. Open the "Find care" page.
+- **On a laptop:**
+  ```
+  pip install -r requirements.txt
+  NAV_DATA_DIR=~/hackathon-data streamlit run app/app.py
+  ```
+- **API:**
+  ```
+  PYTHONPATH=src uvicorn hackathon.navigation.api:app
+  ```
+  Endpoints: `GET /services`, `GET /resolve-location?q=Gaya`, `POST /find-facilities` with `{"service": "hemodialysis", "latitude": 18.52, "longitude": 73.86}`.
 
 ---
 
@@ -98,7 +178,7 @@ tools/
   eval_navigation.py             Evaluate symptom navigation (synthetic cases; optional real data)
 tests/                           Tests for the cleaning and location rules (made-up rows, no real data)
 app/app.py, app.yaml             Optional: demo chat app (Databricks Apps)
-app/pages/1_Find_care.py         Find care: describe symptoms, share a location, see verified facilities
+app/pages/1_Find_care.py         Find care: pick a service and a town / PIN, see facilities with their evidence
 eval/questions.jsonl             Optional: test questions for notebook 06
 data/README.md                   Where the data lives and where it came from (no data in Git)
 sql/load_data_sql_editor.sql     Backup: load the data from the SQL Editor if notebooks won't start

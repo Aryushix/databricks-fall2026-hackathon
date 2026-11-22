@@ -190,3 +190,31 @@ class LocationResolution(_Model):
     spread_km: Optional[float] = None
     candidates: list[LocationCandidate] = []
     note: Optional[str] = None
+
+
+# ---- service search: the community / NGO worker picks a service and a place --------------------------
+class ServiceRequest(_Model):
+    service: str = Field(min_length=1, max_length=60, description="A service id from GET /services")
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    max_results: int = Field(default=5, ge=1, le=20)
+
+
+class ServiceInfo(_Model):
+    id: str
+    name: str
+    verifiable: bool          # a verifier KB exists, so facilities can be CONFIRMED / LIKELY for it
+
+
+class ServiceResponse(_Model):
+    request_id: str
+    service: str
+    service_name: str
+    verifiable: bool
+    disclaimer: str
+    recommendations: list[Recommendation] = []
+    coverage_note: Optional[str] = None
+    search: Optional[SearchInfo] = None
+    degraded: bool = False
+    degraded_reasons: list[str] = []
+    versions: Versions = Versions()
