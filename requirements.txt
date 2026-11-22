@@ -6,3 +6,9 @@ openai>=1.40
 fastapi>=0.115
 pydantic>=2
 uvicorn>=0.30
+# Find care page: facility data, configs, and the India Post lookup behind the town / PIN box
+pandas>=2.0
+numpy
+pyyaml
+phonenumbers
+indiapins==1.1.0

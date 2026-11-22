@@ -1,6 +1,13 @@
 # Symptom navigation
 
-A person describes their pain or symptoms in plain language and shares coordinates. The service returns:
+> **2026-11-22: the app now searches by service, not symptoms.** The users are community and NGO workers, so
+> the "Find care" page and the API (`GET /services`, `POST /find-facilities`, `GET /resolve-location`) take a
+> service and a place. They use the ranking, the location lookup and the evidence described below, with no
+> symptom reading, triage or emergency block. The symptom pipeline (red flags, extraction, care needs) stays in
+> `src/hackathon/navigation` with its tests, but nothing in the app calls it.
+
+A person describes their pain or symptoms in plain language and says where they are: a town, district or PIN code
+(or coordinates). The service returns:
 
 1. **A safety assessment.** When warranted, emergency instructions (call 112 or 108; Tele-MANAS 14416 for self-harm).
 2. **A ranked list of nearby facilities** whose **verified** capabilities match the kind of care the message calls for.
@@ -93,9 +100,10 @@ curl -s localhost:8000/recommend-hospitals -H 'content-type: application/json' \
   - `POST /recommend-hospitals` takes `patient_message` (1–2,000 characters), `latitude`, `longitude` and optional `max_results` (default 5, max 20).
   - Invalid input gets a 422. If the message trips a red flag, the 422 body still carries the emergency block, and errors never echo the input.
   - If extraction, data or ranking fails, the response is still 200, with `degraded: true`, the reasons, and the emergency block.
+  - `GET /resolve-location?q=<town, district or PIN>` (optional `&state=`) turns what a user typed into the `latitude` / `longitude` to send. A name that exists in more than one state comes back `ambiguous`, with the states to choose from; nothing is guessed. See "Location and privacy".
   - `GET /health` reports whether the data is loaded and the state of the model.
 - **Library.** `hackathon.navigation.service.build_navigator().recommend(RecommendRequest(...))` returns the same model as the API (`navigation/contract.py`).
-- **UI.** `app/pages/1_Find_care.py` is a page of the existing Streamlit app (`streamlit run app/app.py`, then open "Find care"). It calls the library in-process, and the emergency block renders first.
+- **UI.** `app/pages/1_Find_care.py` is a page of the existing Streamlit app (`streamlit run app/app.py`, then open "Find care"). The user types the problem and a town, district or PIN code (exact coordinates are optional). It calls the library in-process, and the emergency block renders first, even when the location can't be worked out.
 - **Examples.** `docs/examples/navigation_*.synthetic.json` show a request and response, built from synthetic data.
 
 Without Databricks credentials the model call fails fast and the rule extractor answers; set `llm.enabled: false`
@@ -103,7 +111,14 @@ in `configs/navigation.yaml` to skip the attempt.
 
 ## Location and privacy
 
-- **Location is used for one thing:** measuring straight-line distance to facilities for this one request. It is never inferred from an IP address or anything else; the caller must supply it.
+- **Location is used for one thing:** measuring straight-line distance to facilities for this one request. It is never inferred from an IP address or anything else; the user supplies it.
+- **Typed places** (`navigation/locate.py`) are looked up in the India Post directory (the `indiapins` package, or the CSV at `NAV_PIN_DIRECTORY`):
+  - **A PIN code** resolves to the middle of its post offices.
+  - **A town or district** resolves to the middle of the offices with that name or in that district. If the name is a district in only one state, that state is used ("Patna" → Bihar), and the note lists the other states that have a place with that name.
+  - **A name that is a district in several states,** or only a small place in several, is never guessed ("Aurangabad": Bihar or Maharashtra). The user picks the state.
+  - **Close spellings of a district** are used and shown ("Ahmedabad" → the directory's "Ahmadabad").
+  - **Precision:** the page says how far the offices spread around the point (`spread_km`).
+  - **A point outside the state it belongs to is refused.** The directory files some whole groups of offices with another state's coordinates (all of Aurangabad, Bihar sits on Aurangabad, Maharashtra). The user is asked for a nearby town or PIN instead.
 - **Nothing about the patient is stored.**
   - Coordinates are discarded after the request, and neither they nor the message appear in the response.
   - Logs carry only the request id, urgency, rule ids, counts, latency and degraded reasons.
@@ -173,3 +188,4 @@ consistency with the verifier and the draft configs, not clinical correctness.**
 - **Distance.** It's straight-line, not road distance. Some facilities sit at a city-centre point (the location check accepts anything within 25 km), so distances inside a big city can be off by several km. 823 facilities have PIN-area positions and carry a warning.
 - **Incomplete data.** The dataset doesn't list every facility in India: "nothing within 25 km" means nothing in our data.
 - **Language.** English and Hindi only, best effort. Other scripts get `unclear` and the emergency line.
+- **Typed places.** India Post names offices, not neighbourhoods, so a locality inside a city may need the city or a PIN code instead. A few districts have no usable position in the directory (e.g. Aurangabad, Bihar); a nearby town works.

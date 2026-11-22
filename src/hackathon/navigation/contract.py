@@ -171,3 +171,50 @@ class RecommendResponse(_Model):
     degraded: bool = False
     degraded_reasons: list[str] = []
     versions: Versions = Versions()
+
+
+class LocationCandidate(_Model):
+    place: str
+    state: str
+
+
+class LocationResolution(_Model):
+    """What a typed place or PIN resolved to. Nothing typed is stored; the point is only used for distances."""
+    status: Literal["found", "ambiguous", "not_found"]
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    label: Optional[str] = None
+    # pin: a PIN's post offices; place: a town or district name; place_approx: a close spelling or a longer name
+    method: Optional[Literal["pin", "place", "place_approx"]] = None
+    # median distance of the directory's post offices from the point: how precise the point is
+    spread_km: Optional[float] = None
+    candidates: list[LocationCandidate] = []
+    note: Optional[str] = None
+
+
+# ---- service search: the community / NGO worker picks a service and a place --------------------------
+class ServiceRequest(_Model):
+    service: str = Field(min_length=1, max_length=60, description="A service id from GET /services")
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    max_results: int = Field(default=5, ge=1, le=20)
+
+
+class ServiceInfo(_Model):
+    id: str
+    name: str
+    verifiable: bool          # a verifier KB exists, so facilities can be CONFIRMED / LIKELY for it
+
+
+class ServiceResponse(_Model):
+    request_id: str
+    service: str
+    service_name: str
+    verifiable: bool
+    disclaimer: str
+    recommendations: list[Recommendation] = []
+    coverage_note: Optional[str] = None
+    search: Optional[SearchInfo] = None
+    degraded: bool = False
+    degraded_reasons: list[str] = []
+    versions: Versions = Versions()

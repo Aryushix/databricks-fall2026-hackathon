@@ -4,6 +4,8 @@
 navigation_version: "0.1.0"
 
 disclaimer: "This tool helps find facilities; it does not give medical advice. If this may be an emergency, call 112."
+# Service search (Find care page, POST /find-facilities): the user is a community or NGO worker, not a patient.
+service_disclaimer: "This tool shows what the documented evidence supports about each facility. It isn't a guarantee that a service is available today: call the facility to confirm before sending anyone."
 
 # Emergency contacts. Shown from here only, never from model output. Each carries its source.
 contacts:
