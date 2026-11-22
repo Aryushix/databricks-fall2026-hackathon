@@ -16,10 +16,12 @@ No real medical facility information is served.
 
 from typing import Any, Optional
 
+from connector.chatbot_connector import attach_chatbot
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
-
+from frontend_config import attach_frontend_config
+from main import ApplicationOrchestrator
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -27,13 +29,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
 from schemas import Intent, UserRequest
-from main import ApplicationOrchestrator
-from connector.chatbot_connector import attach_chatbot
-
-from frontend.frontend_config import attach_frontend_config
-
 
 # ==========================================
 # 1. INITIALIZE FASTAPI

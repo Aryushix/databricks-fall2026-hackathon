@@ -20,14 +20,14 @@ Uses Python standard library only.
 from copy import deepcopy
 from threading import RLock
 from typing import Optional
+from uuid import uuid4
 
 from schemas import (
     Intent,
-    SessionState,
     SearchConfirmation,
+    SessionState,
     UserRequest,
 )
-from uuid import uuid4
 
 
 class StateManager:

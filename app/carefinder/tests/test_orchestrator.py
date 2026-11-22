@@ -14,23 +14,18 @@ These tests exercise the existing six-file MVP.
 """
 
 import pytest
-
-from schemas import (
-    Intent,
-    UserRequest,
-    ResponseStatus,
-    EvidenceStatus,
-)
-
 from main import ApplicationOrchestrator
-
 from mock_services import (
-    MockSearchService,
     MockRankingService,
+    MockSearchService,
 )
-
-from schemas import SearchQuery
-
+from schemas import (
+    EvidenceStatus,
+    Intent,
+    ResponseStatus,
+    SearchQuery,
+    UserRequest,
+)
 
 # ==========================================
 # TEST FIXTURE

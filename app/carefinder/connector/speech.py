@@ -23,13 +23,11 @@ import time
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
-
 from schemas import (
     Intent,
     SearchConfirmation,
     UserRequest,
 )
-
 
 # ==========================================
 # 1. SERVICES THE APP CAN SEARCH

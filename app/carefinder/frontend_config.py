@@ -5,6 +5,7 @@ This endpoint intentionally never exposes GEMINI_API_KEY.
 """
 
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()

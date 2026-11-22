@@ -22,7 +22,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
 
-
 # ==========================================
 # 1. USER INTENT TYPES
 # ==========================================
@@ -63,28 +62,6 @@ class ResponseStatus(str, Enum):
     ERROR = "error"
 
     RESET = "reset"
-
-
-# ==========================================
-# 3. SEARCH CONFIRMATION
-# ==========================================
-
-@dataclass
-class SearchConfirmation:
-    """
-    Stores the search criteria awaiting
-    explicit user confirmation.
-
-    Example:
-        service = "dialysis"
-        location = "Gaya"
-
-    The chatbot can present:
-        "Dialysis near Gaya. Is that correct?"
-    """
-
-    service: str
-    location: str
 
 
 # ==========================================

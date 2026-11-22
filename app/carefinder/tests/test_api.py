@@ -26,15 +26,11 @@ Run from the orchestrator directory:
 No real server or dataset is required.
 """
 
-import pytest
-
-from fastapi.testclient import TestClient
-
 import api as api_module
-
+import pytest
+from fastapi.testclient import TestClient
 from main import ApplicationOrchestrator
 from mock_services import MockSearchService
-
 
 # ==========================================
 # 1. TEST FIXTURE
@@ -193,10 +189,10 @@ def test_search_requires_confirmation(test_env):
 
     assert data["status"] == "confirmation_required"
 
-    assert data["confirmation"] == {
-        "service": "dialysis",
-        "location": "Gaya"
-    }
+    assert data["confirmation"]["service"] == "dialysis"
+    assert data["confirmation"]["location"] == "Gaya"
+    assert isinstance(data["confirmation"]["confirmation_id"], str)
+    assert data["confirmation"]["confirmation_id"]
 
     assert data["facilities"] == []
 

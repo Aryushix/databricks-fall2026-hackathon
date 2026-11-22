@@ -22,13 +22,12 @@ from copy import deepcopy
 from uuid import uuid4
 
 from schemas import (
-    SearchQuery,
-    Hospital,
     Evidence,
     EvidenceStatus,
+    Hospital,
+    SearchQuery,
     TrustLabel,
 )
-
 
 # ==========================================
 # 1. CREATE FICTIONAL HOSPITAL RECORDS

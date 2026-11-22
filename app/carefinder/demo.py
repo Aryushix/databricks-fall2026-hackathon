@@ -25,15 +25,14 @@ No external packages required.
 
 import argparse
 
+from main import ApplicationOrchestrator
+from mock_services import MockSearchService
 from schemas import (
     Intent,
     ResponseStatus,
     UserRequest,
 )
 
-from main import ApplicationOrchestrator
-
-from mock_services import MockSearchService
 
 def make_confirmation_request(
     app,

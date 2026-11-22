@@ -23,12 +23,11 @@ from typing import Optional
 
 from schemas import (
     Intent,
-    UserRequest,
-    SessionState,
-    SearchQuery,
     SearchConfirmation,
+    SearchQuery,
+    SessionState,
+    UserRequest,
 )
-
 
 # ==========================================
 # 1. AVAILABLE WORKFLOW ACTIONS

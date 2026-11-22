@@ -10,10 +10,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
-
-from . import speech
-from . import spoken
 from schemas import Intent, UserRequest
+
+from . import speech, spoken
 
 load_dotenv()
 logger = logging.getLogger("care_finder.chatbot_connector")
