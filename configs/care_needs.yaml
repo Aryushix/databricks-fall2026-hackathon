@@ -1,0 +1,95 @@
+# Care-need mapping for symptom navigation (src/hackathon/navigation/care_needs.py).
+#
+# DRAFT. These are not medical rules: a clinician should review every mapping and role.
+#
+# A care need is a department, service or capability a facility must have. Its evidence comes from,
+# in this order:
+#   1. `kb`: a verifier KB id. It counts only once src/hackathon/verification/kb/<kb>.yaml exists and
+#      the loaded verification run has records for it; until then the need shows "not verifiable yet".
+#   2. `proxy_kbs`: verified procedures that imply the department (a verified knee replacement
+#      suggests an orthopedics department). The explanation says exactly that, never that the
+#      person needs the procedure.
+#   3. `signals`: `specialties` taxonomy values and facility types. Unverified: shown separately,
+#      never a capability match.
+# `fallback_types`: facility types for the "capability not verified, call ahead" list.
+
+care_needs_version: "0.1.0"
+review_status: draft
+
+needs:
+  emergency_department: {name: "Emergency department", kb: emergency_department, signals: {specialties: [emergencyMedicine, pediatricEmergencyMedicine]}}
+  cardiac_catheterization: {name: "Cardiac catheterization (cath lab)", kb: cardiac_catheterization, signals: {specialties: [interventionalCardiology]}}
+  adult_icu_ventilation: {name: "Adult ICU with ventilation", kb: adult_icu_ventilation, signals: {specialties: [criticalCareMedicine]}}
+  ct_scan: {name: "CT scan", kb: ct_scan, signals: {specialties: [radiology, diagnosticRadiology]}}
+  stroke_thrombolysis: {name: "Stroke thrombolysis", kb: stroke_thrombolysis, signals: {specialties: [vascularNeurology, neurology]}}
+  trauma_care_24x7: {name: "24x7 trauma care", kb: trauma_care_24x7, signals: {specialties: [orthopedicTraumaAndFractureSurgery, burnAndTraumaPlasticSurgery]}}
+  blood_bank: {name: "Blood bank", kb: blood_bank}
+  burn_unit: {name: "Burn unit", kb: burn_unit, signals: {specialties: [burnAndTraumaPlasticSurgery]}}
+  emergency_c_section_24x7: {name: "24x7 emergency C-section", kb: emergency_c_section_24x7, signals: {specialties: [gynecologyAndObstetrics, obstetricsAndMaternityCare, obstetricsAndGynecology, obstetricsAndGynaecology]}}
+  nicu: {name: "Newborn intensive care (NICU)", kb: nicu, signals: {specialties: [neonatologyPerinatalMedicine]}}
+  picu: {name: "Paediatric intensive care (PICU)", kb: picu, signals: {specialties: [pediatricCriticalCareMedicine]}}
+  anti_snake_venom: {name: "Anti-snake venom", kb: anti_snake_venom}
+  anti_rabies: {name: "Anti-rabies vaccine", kb: anti_rabies}
+  general_surgery: {name: "General surgery", kb: general_surgery, signals: {specialties: [generalSurgery]}}
+  general_medicine: {name: "General medicine", signals: {specialties: [internalMedicine, familyMedicine, generalMedicine]}, fallback_types: [hospital, clinic]}
+  orthopedics: {name: "Orthopedics", proxy_kbs: [knee_replacement, hip_replacement], signals: {specialties: [orthopedicSurgery, orthopedics, orthopaedics, jointReconstructionSurgery, jointReplacementSurgery]}, fallback_types: [hospital, clinic]}
+  mri: {name: "MRI", kb: mri, signals: {specialties: [radiology, diagnosticRadiology]}}
+  ophthalmology: {name: "Eye care (ophthalmology)", proxy_kbs: [cataract_surgery], signals: {specialties: [ophthalmology, cataractAndAnteriorSegmentSurgery, retinaAndVitreoretinalOphthalmology]}, fallback_types: [hospital, clinic]}
+  hemodialysis: {name: "Hemodialysis", kb: hemodialysis, signals: {specialties: [nephrology, pediatricNephrology]}, fallback_types: [hospital, clinic]}
+  dentistry: {name: "Dentistry", signals: {specialties: [dentistry, generalDentistry], facility_types: [dentist]}, fallback_types: [dentist, hospital]}
+  ent: {name: "Ear, nose and throat (ENT)", signals: {specialties: [otolaryngology, ent]}, fallback_types: [hospital, clinic]}
+  obstetrics: {name: "Obstetrics", signals: {specialties: [gynecologyAndObstetrics, obstetricsAndMaternityCare, obstetricsAndGynecology]}, fallback_types: [hospital, clinic]}
+  pediatrics: {name: "Paediatrics", signals: {specialties: [pediatrics, paediatrics]}, fallback_types: [hospital, clinic]}
+  dermatology: {name: "Skin (dermatology)", signals: {specialties: [dermatology]}, fallback_types: [hospital, clinic]}
+  urology: {name: "Urology", signals: {specialties: [urology]}, fallback_types: [hospital, clinic]}
+
+# Red-flag categories (configs/red_flags.yaml) -> care needs. Every emergency category includes
+# the emergency department (design note, change 6).
+categories:
+  possible_heart_attack: {required: [emergency_department, cardiac_catheterization], supporting: [adult_icu_ventilation]}
+  possible_stroke: {required: [emergency_department, ct_scan, stroke_thrombolysis]}
+  breathing_difficulty: {required: [emergency_department], supporting: [adult_icu_ventilation]}
+  major_trauma_bleeding: {required: [emergency_department, trauma_care_24x7], supporting: [blood_bank, ct_scan]}
+  burns: {required: [emergency_department, burn_unit]}
+  pregnancy_emergency: {required: [emergency_department, emergency_c_section_24x7], supporting: [blood_bank, nicu]}
+  newborn_child_emergency: {required: [emergency_department], supporting: [nicu, picu]}
+  unconscious_seizure: {required: [emergency_department], supporting: [ct_scan]}
+  poisoning_overdose_bites: {required: [emergency_department], supporting: [adult_icu_ventilation, anti_snake_venom, anti_rabies]}
+  severe_allergic_reaction: {required: [emergency_department]}
+  severe_abdominal_pain: {required: [emergency_department, general_surgery], supporting: [ct_scan]}
+  self_harm: {required: [emergency_department]}
+
+# Extracted findings -> care needs, for messages without (or beyond) red flags. Within a `group`
+# only the first matching rule applies. A rule matches when every condition in `when` holds.
+findings:
+  - {id: DIALYSIS, when: {context_any: [on_dialysis]}, required: [hemodialysis]}
+  - {id: KIDNEY_FAILURE, when: {context_any: [kidney_disease]}, required: [hemodialysis], supporting: [general_medicine]}
+  - {id: TEETH, when: {locations_any: [teeth]}, required: [dentistry]}
+  - {id: EYE, when: {locations_any: [eye]}, required: [ophthalmology]}
+  - {id: EAR_NOSE_THROAT, when: {locations_any: [ear, nose, throat]}, required: [ent]}
+  - {id: ABDOMEN_SEVERE, group: abdomen, when: {locations_prefix: [abdomen], severity_any: [severe]}, required: [emergency_department, general_surgery], supporting: [ct_scan]}
+  - {id: ABDOMEN, group: abdomen, when: {locations_prefix: [abdomen]}, required: [general_medicine], supporting: [general_surgery]}
+  - {id: JOINT, when: {locations_any: [knee, hip, joint, back, shoulder]}, required: [orthopedics], supporting: [mri]}
+  - {id: LIMB, group: limb, when: {locations_any: [arm, leg, neck]}, required: [orthopedics]}
+  - {id: SKIN, when: {locations_any: [skin]}, required: [dermatology]}
+  - {id: URINARY, when: {locations_any: [urinary, kidney]}, required: [urology], supporting: [general_medicine]}
+  - {id: PREGNANCY, when: {context_any: [pregnancy]}, required: [obstetrics]}
+  - {id: CHILD, when: {context_any: [infant_child]}, supporting: [pediatrics]}
+  - {id: GENERAL, group: general, when: {locations_any: [head, face, chest, pelvis]}, required: [general_medicine]}
+  - {id: GENERAL_SYMPTOMS, group: general, when: {symptoms_any: [fever, cough, vomiting, diarrhoea, dizziness, fatigue, nausea, rash, swelling]}, required: [general_medicine]}
+
+# Urgency from findings when no red flag sets a floor (it can only add to the floor). In order;
+# the highest level any rule gives wins. With no care need mapped, urgency is "unclear".
+urgency_rules:
+  - {level: urgent, when: {severity_any: [severe]}}
+  - {level: urgent, when: {onset_any: [sudden], severity_any: [moderate, severe]}}
+  - {level: urgent, when: {context_any: [pregnancy], symptoms_any: [bleeding, fever, vomiting]}}
+  - {level: urgent, when: {context_any: [pregnancy], locations_prefix: [abdomen]}}
+  - {level: urgent, when: {context_any: [infant_child], symptoms_any: [fever, vomiting, diarrhoea]}}
+
+follow_up_questions:
+  language: "Could you describe the problem in English or Hindi?"
+  location: "Where is the pain or problem (for example chest, belly, head, knee)?"
+  severity: "How bad is it: mild, moderate or severe?"
+  duration: "How long has this been going on?"
+  onset: "Did it start suddenly or slowly?"

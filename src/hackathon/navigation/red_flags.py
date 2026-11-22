@@ -143,6 +143,10 @@ class RedFlagRules:
             after = after[:cut.start()]
         return bool(self._after.search(after))
 
+    def is_negated(self, text: str, start: int, end: int) -> bool:
+        """Scoped negation on normalised text (shared with the rule extractor)."""
+        return self._negated(text, start, end)
+
     def _group_hit(self, text: str, group: list[re.Pattern], negatable: bool) -> bool:
         for pat in group:
             for m in pat.finditer(text):

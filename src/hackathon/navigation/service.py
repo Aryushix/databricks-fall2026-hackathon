@@ -244,6 +244,6 @@ def build_navigator(config_path: str | Path = DEFAULT_CONFIG, data_paths: Option
     cfg = load_nav_config(config_path)
     rules = RedFlagRules.load()
     mapper = CareNeedTable.load()
-    extractor = make_extractor(cfg, mapper.terms, use_llm=use_llm)
+    extractor = make_extractor(cfg, mapper.terms, rules, use_llm=use_llm)
     return Navigator(rules, cfg, extractor=extractor, mapper=mapper,
                      store_provider=lazy_file_store(data_paths), ranker=NavigationRanker(cfg, mapper))
