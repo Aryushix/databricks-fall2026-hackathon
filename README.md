@@ -55,6 +55,7 @@ flowchart LR
 | Silver | `silver_facilities` (+ `_dq_summary`) | `01` | Our facility cleaning rules; every doubtful value flagged in `dq_flags` |
 | Silver | `silver_facilities_verified` (+ `_location_removed`) | `01b` | Location checked against India Post; best point to measure from; evidence sentence |
 | Silver | `silver_<table>` for the other two tables | `02` | Fixed types, trimmed text, no duplicates |
+| Silver | `silver_facility_evidence` | `02b` | One row per facility claim, from the cleaned lists, with `source_urls` to cite |
 | Gold | `gold_<name>` | `03`, `04` | Joined and summarized tables the demo reads. Every table gets a `COMMENT`. |
 
 **The three source tables:**
@@ -74,6 +75,7 @@ notebooks/
   01_clean_facilities.py         2. Clean the facilities → silver_facilities, with data-quality flags
   01b_verify_locations.py        2b. Check each location against India Post → silver_facilities_verified
   02_clean_silver.py             3. Clean the PIN directory and NFHS-5 tables → silver_<table>
+  02b_facility_evidence.py       3b. One row per facility claim (specialty, procedure, equipment, capability) → silver_facility_evidence
   03_gold_tables.sql             4. Join and summarize → gold_ tables (write our logic here)
   04_ai_enrich.sql               5. LLM functions on text columns: classify, extract, mask
   05_build_rag_index.py          Optional: search index for a chatbot over documents
@@ -125,6 +127,7 @@ Always attach **Serverless** compute. AI Functions don't work on other compute.
 | `01_clean_facilities` | Nothing. Put `dataset.csv` in the `raw` volume first for complete data | `silver_facilities`, `silver_facilities_dq_summary` |
 | `01b_verify_locations` | Nothing. To also drop rows whose location fields disagree, add `"conflicting"` to `REMOVE_STATUSES` | `silver_facilities_verified`, `silver_facilities_location_removed` |
 | `02_clean_silver` | `dataset` = `india_post_pincode_directory`, then the NFHS-5 table name; `keys` = its ID column if it has one | `silver_<table>` and a null-count report |
+| `02b_facility_evidence` | Nothing. Run after `01b` | `silver_facility_evidence`: one row per claim, with `source_urls` |
 | `03_gold_tables` | Nothing. Edit the SQL. | Our `gold_` tables |
 | `04_ai_enrich` | Nothing. Replace the example table and column names. | AI-enriched `gold_` table |
 
