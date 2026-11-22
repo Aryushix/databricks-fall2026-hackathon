@@ -45,6 +45,6 @@ About 10,000 facilities with 51 attributes, mostly **extracted from web text**. 
 | Check each facility's location and give it a point to measure from | Done | `notebooks/01b_verify_locations`, `docs/LOCATION_CHECKS.md`: `resolved_latitude` / `resolved_longitude`, `location_confidence`, `location_evidence` |
 | Resolve the user's location (city / district / PIN) to a point or area | To do | Reuse `location_check.Directory`: `find_city()` and the PIN lookups |
 | Match a service to a facility's claims, with the supporting text | In progress: cardiac catheterization and hemodialysis | `src/hackathon/verification`, `docs/TREATMENT_VERIFICATION.md` |
-| Score and rank (evidence strength × distance × data quality) | To do | Use `dq_flags` and `location_confidence` to lower confidence (see `docs/DATA_CLEANING.md`, `docs/LOCATION_CHECKS.md`) |
-| Explain each pick: quotes from `description`, `source_urls`, and an uncertainty note | To do | |
-| Non-technical front end | To do | Genie space, Databricks App (`app/`), or both |
+| Score and rank (evidence strength × distance × data quality) | In progress: tiered ranking by verified status, confidence band, then distance; location problems become warnings | `verification/query.py` (query mode 3), `navigation/rank.py`, `docs/SYMPTOM_NAVIGATION.md` |
+| Explain each pick: quotes from `description`, `source_urls`, and an uncertainty note | In progress: verbatim quotes, source or `source_urls`, warnings and a templated explanation per pick | `navigation/rank.py` |
+| Non-technical front end | In progress: "Find care" page in the Streamlit app, plus an API | `app/pages/1_Find_care.py`, `navigation/api.py` |

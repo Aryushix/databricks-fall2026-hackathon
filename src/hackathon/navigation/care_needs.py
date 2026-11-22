@@ -73,7 +73,7 @@ class CareNeedTable:
     def _finding_needs(self, a: Optional[SymptomAnalysis]) -> list[tuple[str, str]]:
         if a is None:
             return []
-        out, used_groups = [], set()
+        out, used_groups, fallbacks = [], set(), []
         for f in self.cfg["findings"]:
             g = f.get("group")
             if g and g in used_groups:
@@ -81,8 +81,9 @@ class CareNeedTable:
             if _holds(f["when"], a):
                 if g:
                     used_groups.add(g)
-                out += [(n, "required") for n in f.get("required", [])] + [(n, "supporting") for n in f.get("supporting", [])]
-        return out
+                pairs = [(n, "required") for n in f.get("required", [])] + [(n, "supporting") for n in f.get("supporting", [])]
+                (fallbacks if f.get("only_if_nothing_else") else out).extend(pairs)
+        return out or fallbacks
 
     def _category_needs(self, cats: list[str]) -> list[tuple[str, str]]:
         out = []

@@ -9,5 +9,8 @@ env:
     value: 'hackathon'
   - name: 'HACKATHON_LLM_ENDPOINT'
     value: 'databricks-gpt-oss-120b'
+  # Find care page (app/pages/1_Find_care.py): facility + verification files, never in Git
+  - name: 'NAV_DATA_DIR'
+    value: '/Volumes/workspace/hackathon/raw/navigation'
   - name: 'STREAMLIT_GATHER_USAGE_STATS'
     value: 'false'

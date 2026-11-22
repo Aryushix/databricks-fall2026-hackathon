@@ -95,7 +95,7 @@ special_context:
   on_dialysis: ['\b(?:dialysis|dialisis|dialysys|haemodialysis|hemodialysis)\b', 'डायलिसिस']
   diabetes: ['\b(?:diabet\w*|sugar\s+(?:patient|problem|hai|ki\s+bimari))\b', 'शुगर|मधुमेह']
   heart_condition: ['\b(?:heart\s+patient|heart\s+problem|had\s+a\s+heart\s+attack|stent|bypass\s+surgery)\b']
-  kidney_disease: ['\b(?:kidney\s+(?:failure|disease|problem)|ckd|renal\s+failure)\b']
+  kidney_disease: ['\b(?:kidney\s+(?:failure|disease|problem)|kidneys?\s+(?:have\s+|has\s+)?fail\w*|ckd|renal\s+failure)\b']
 
 languages:
   # Latin-script messages with at least two of these words are treated as romanized Hindi/Hinglish.

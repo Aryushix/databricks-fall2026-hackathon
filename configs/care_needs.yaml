@@ -61,6 +61,7 @@ categories:
 
 # Extracted findings -> care needs, for messages without (or beyond) red flags. Within a `group`
 # only the first matching rule applies. A rule matches when every condition in `when` holds.
+# `only_if_nothing_else`: applies only when no other rule matched (a general fallback, not noise).
 findings:
   - {id: DIALYSIS, when: {context_any: [on_dialysis]}, required: [hemodialysis]}
   - {id: KIDNEY_FAILURE, when: {context_any: [kidney_disease]}, required: [hemodialysis], supporting: [general_medicine]}
@@ -72,11 +73,11 @@ findings:
   - {id: JOINT, when: {locations_any: [knee, hip, joint, back, shoulder]}, required: [orthopedics], supporting: [mri]}
   - {id: LIMB, group: limb, when: {locations_any: [arm, leg, neck]}, required: [orthopedics]}
   - {id: SKIN, when: {locations_any: [skin]}, required: [dermatology]}
-  - {id: URINARY, when: {locations_any: [urinary, kidney]}, required: [urology], supporting: [general_medicine]}
+  - {id: URINARY, when: {locations_any: [urinary]}, required: [urology], supporting: [general_medicine]}
   - {id: PREGNANCY, when: {context_any: [pregnancy]}, required: [obstetrics]}
   - {id: CHILD, when: {context_any: [infant_child]}, supporting: [pediatrics]}
-  - {id: GENERAL, group: general, when: {locations_any: [head, face, chest, pelvis]}, required: [general_medicine]}
-  - {id: GENERAL_SYMPTOMS, group: general, when: {symptoms_any: [fever, cough, vomiting, diarrhoea, dizziness, fatigue, nausea, rash, swelling]}, required: [general_medicine]}
+  - {id: GENERAL, group: general, only_if_nothing_else: true, when: {locations_any: [head, face, chest, pelvis]}, required: [general_medicine]}
+  - {id: GENERAL_SYMPTOMS, group: general, only_if_nothing_else: true, when: {symptoms_any: [fever, cough, vomiting, diarrhoea, dizziness, fatigue, nausea, rash, swelling]}, required: [general_medicine]}
 
 # Urgency from findings when no red flag sets a floor (it can only add to the floor). In order;
 # the highest level any rule gives wins. With no care need mapped, urgency is "unclear".
