@@ -7,9 +7,11 @@ reason codes, a confidence score and the exact evidence behind the verdict.
 **A result describes what the documented evidence supports. It is not a guarantee that a treatment is
 clinically available today.** Every field in this dataset is a claim extracted from the web.
 
-Status: **Phase 2** of the build. Two treatment families are wired end to end (cardiac catheterization and
-hemodialysis). Query modes 2 and 3, Spark batch runs (Phase 3), and the evaluation and calibration
-tools (Phase 4) are not built yet. The design memo behind the choices below covers the data audit.
+Status: **Phase 3** of the build. Four treatments are wired end to end: cardiac catheterization, hemodialysis,
+emergency department and CT scan (the last two are draft KBs). Query modes 1–3 over the precomputed records are in
+`verification/query.py` and the CLI (mode 3 is the base of symptom navigation's ranking, `docs/SYMPTOM_NAVIGATION.md`).
+Batch runs across processes and a Databricks job notebook are built (see "Phase 3" below). The evaluation and
+calibration tools (Phase 4) are not built yet; their design is in `docs/verification_benchmark_design.md`. The design memo behind the choices below covers the data audit.
 
 ## How it works
 
