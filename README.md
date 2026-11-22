@@ -2,12 +2,14 @@
 
 > **CMU Datathon, Fall 2026: Find the right care.** Given a service (dialysis, emergency C-section, NICU, MRI…) and a location in India, recommend the best facilities and show the evidence behind each pick. Brief and checklist: [`docs/CHALLENGE.md`](docs/CHALLENGE.md).
 >
-> **TODO:** one sentence on what we built and who it helps.
+> **What we built:** "Find care", a page where a community health worker or NGO coordinator types a patient's problem in their own words (English or Hindi) and a town or PIN code. It gets the nearby facilities whose capability we could verify, each with the exact quote and link behind it and how sure we are. In an emergency, the 112 / 108 instructions come first.
 
 | Teammate | GitHub | Working on |
 | --- | --- | --- |
-| Brian | | |
-| TODO | | |
+| Brian | Aryushix | Data cleaning, location checks, treatment verification, symptom navigation and the Find care page |
+| Maaz | MaazKashif789 | PIN directory and NFHS-5 cleaning (`02`), facility evidence table (`02b`) |
+| Tanisha | TanishaKr07 | Care Finder orchestrator backend (`app/carefinder`, branch `tanisha/orchestrator`) |
+| Abdullah | TODO | Care Finder React frontend and chatbot |
 
 **In one line:** we copy the Virtue Foundation health data into our own Databricks schema, clean it (flagging every doubtful value instead of hiding it), join it into tables that answer "where should this patient go?", and show each answer with its evidence.
 
