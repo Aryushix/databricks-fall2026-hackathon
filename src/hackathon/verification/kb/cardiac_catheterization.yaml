@@ -1,0 +1,110 @@
+# Treatment knowledge base entry. Patterns are Python regular expressions, matched case-insensitively.
+# Matching order on each claim: confusables first (they block any overlapping match), then the longest
+# match wins among synonyms, children, prerequisites and ambiguous terms.
+# Examples are SYNTHETIC: the repo is public and the data's sharing terms keep real records out of it.
+
+concept_id: cardiac_catheterization
+kb_version: 0.2.0
+review_status: draft            # draft | reviewed
+drafted_by: claude-opus-5-5, 2026-11-21
+reviewed_by: null
+reviewed_on: null
+canonical_name: Cardiac catheterization
+category: cardiology
+specialization: highly_specialized
+plausible_facility_types: [hospital]
+
+codes:
+  mesh:
+    - {id: D006328, name: Cardiac Catheterization}
+    - {id: D017023, name: Coronary Angiography, note: "also covers CT coronary angiography; only the invasive test counts here"}
+  icd10_pcs:                    # measurement of cardiac sampling and pressure, percutaneous
+    - {code: 4A023N6, qualifier: right heart}
+    - {code: 4A023N7, qualifier: left heart}
+    - {code: 4A023N8, qualifier: bilateral}
+
+synonyms:                       # the treatment itself: specificity "exact"
+  - '\b(?:cardiac|heart|coronary) cath(?:eteri[sz]ations?)?\b(?![- ]?lab)'
+  - '\b(?:left|right|bilateral)[- ]heart cath(?:eteri[sz]ations?)?\b'
+
+children:                       # a direct claim for a child is a direct claim for this concept
+  - id: coronary_angiography_invasive
+    patterns: ['\bcoronary angio(?:graphy|graphies|gram|grams)\b', '\bcoronary arteriogra\w*', '\bCAG\b']
+  - id: pci
+    patterns:
+      - '\bp\.?t\.?c\.?a\b'
+      - '\bpci\b'
+      - 'percutaneous (?:transluminal )?coronary (?:intervention|angioplasty)'
+      - '\bcoronary angioplast(?:y|ies)\b'
+      - '\bcoronary stent(?:s|ing)?\b'
+      - '\b(?:primary|elective|complex|cardiac|heart) angioplast(?:y|ies)\b'
+      - '\bangioplast(?:y|ies) (?:and|&|with) stent\w*'
+  - id: balloon_valvotomy
+    patterns: ['\bbmv\b', '\bptmc\b', '\bballoon (?:mitral )?valvo(?:tomy|plasty)\b', '\bballoon valvuloplasty\b']
+  - id: device_closure
+    patterns: ['\bdevice closure\b', '\b(?:asd|vsd|pda) (?:device )?closure\b']
+
+ambiguous:                      # counted only when the context settles it; otherwise AMBIGUOUS
+  - pattern: '\bangio(?:graphy|graphies|gram|grams)\b'
+    upgrade_if: '\b(?:coronary|cardiac|heart|cath\w*|ptca|stent\w*|cardiolog\w*)\b'
+    confusable_if: '\b(?:ct|cect|mdct|computed|fluorescein|ffa|oct|icg|eye|cerebral|neuro\w*|brain|peripheral|renal|carotid|limb|dsa|subtraction|pulmonary|mr|magnetic|fundus|retina\w*)\b'
+  - pattern: '\bangioplast(?:y|ies)\b'
+    upgrade_if: '\b(?:coronary|cardiac|heart|ptca|stent\w*|primary|cath\w*|bypass)\b'
+    confusable_if: '\b(?:biochemical|peripheral|renal|carotid|cerebral|intracranial|limb|venous|iliac|femoral|sinus)\b'
+
+confusables:                    # never evidence for this concept, even when a pattern above also matches
+  - id: ct_angiography
+    why: non-invasive imaging, no catheter
+    patterns: ['\b(?:ct|cect|mdct|cardiac ct|computed tomograph\w*)[- ](?:coronary )?angio\w*', '\bccta\b', '\bcta\b']
+  - id: eye_angiography
+    why: eye imaging
+    patterns: ['\b(?:fundus )?fluorescein angio\w*', '\bffa\b', '\boct[- ]?angio\w*', '\bocta\b', '\bindocyanine green angio\w*', '\bicg[- ]?angio\w*']
+  - id: mr_angiography
+    why: non-invasive imaging
+    patterns: ['\bmr[- ]?angio\w*', '\bmra\b', '\bmagnetic resonance angio\w*']
+  - id: non_cardiac_angiography
+    why: catheter-based but not cardiac
+    patterns:
+      - '\b(?:cerebral|neuro|brain|carotid|peripheral|renal|limb|pulmonary|mesenteric|spinal|hepatic|bronchial|four[- ]vessel|digital subtraction) angio\w*'
+      - '\bdsa\b'
+  - id: non_cardiac_angioplasty
+    why: angioplasty outside the heart
+    patterns: ['\b(?:peripheral|renal|carotid|cerebral|intracranial|limb|iliac|femoral|venous|below[- ]knee|sinus) angioplast\w*']
+  - id: non_invasive_cardiac_marketing
+    why: non-invasive therapies marketed as alternatives to angioplasty
+    patterns: ['\bbiochemical angioplast\w*', '\beecp\b', '\b(?:enhanced )?external counter ?pulsation\b']
+  - id: other_catheters
+    why: different catheters
+    patterns:
+      - '\burinary catheter\w*'
+      - '\bfoley\b'
+      - '\bcentral (?:venous|line) catheter\w*'
+      - '\bdialysis catheter\w*'
+      - '\bpicc\b'
+      - '\bsuprapubic catheter\w*'
+
+prerequisites:
+  - {id: cath_lab, kind: facility, key: true,
+     patterns: ['\bcath(?:eteri[sz]ation)?[- ]?lab(?:oratory|oratories|s)?\b', '\bcathlabs?\b', '\bcatheteri[sz]ation laborator(?:y|ies)\b']}
+  - {id: interventional_cardiology, kind: specialty, key: true,
+     patterns: ['\binterventional cardiolog(?:y|ist|ists)\b'], taxonomy: ['^interventionalCardiology$']}
+  - {id: cardiology, kind: specialty, key: false, taxonomy: ['^cardiology$', '^pediatricCardiology$']}
+  - {id: fluoroscopy, kind: equipment, key: false,
+     patterns: ['\bfluoroscop\w*', '\bflat[- ]panel\b', '\bbiplane\b']}   # C-arm left out: orthopedic C-arms are common
+  - {id: cardiac_surgery_backup, kind: service, key: false,
+     patterns: ['\bcardiac surger\w*', '\bcardiothoracic\b', '\bctvs\b', '\bopen[- ]heart\b', '\bcabg\b'],
+     taxonomy: ['^cardiacSurgery$', '^cardiothoracicSurgery$']}
+  - {id: coronary_care_unit, kind: facility, key: false,
+     patterns: ['\bi?ccu\b', '\bcoronary care unit\b', '\bcardiac (?:icu|intensive care)\b']}
+key_groups: [[cath_lab], [interventional_cardiology]]   # "key prerequisites met" = one from every group
+
+examples:                       # SYNTHETIC regression cases for tests/test_verification_kb.py
+  - {text: "Performs cardiac catheterization and coronary angiography", match: exact}
+  - {text: "Coronary angioplasty (PTCA) with stenting", match: child}
+  - {text: "CT coronary angiography on a 128-slice scanner", match: confusable}
+  - {text: "Biochemical Angioplasty program", match: confusable}
+  - {text: "Fundus fluorescein angiography", match: confusable}
+  - {text: "Angiography services", match: ambiguous}
+  - {text: "Peripheral angioplasty", match: confusable}
+  - {text: "24x7 cath lab", match: prerequisite}
+  - {text: "Foley urinary catheter insertion", match: confusable}

@@ -1,7 +1,8 @@
-# Laptop tools: tools/clean_dataset.py, tools/facility_crawler.py and tools/verify_locations.py
+# Laptop tools: tools/clean_dataset.py, tools/facility_crawler.py, tools/verify_locations.py and tools/verify_treatments.py
 pandas>=2.0
 numpy
 phonenumbers
 httpx
 beautifulsoup4
 indiapins==1.1.0
+pyyaml
