@@ -1,0 +1,57 @@
+# Service catalog for the NGO service finder (navigation/matcher.py). Keys are care-need ids from
+# configs/care_needs.yaml. A service with `kb_id` is matched by its verifier KB (path A: CONFIRMED / LIKELY records,
+# with look-alike and negation rules). A service without one is matched on the 4 claim pillars (path B):
+# equipment, procedures, specialties, capabilities. Path B results are a separate SEMANTIC_MATCH tier: not verified.
+# DRAFT requirement profiles (2026-11-22): a clinician should review them.
+
+version: "1.0.0"
+pillar_weights: {procedures: 0.35, equipment: 0.30, specialties: 0.20, capabilities: 0.15}
+services:
+  hemodialysis: {name: "Hemodialysis", category: "Renal care", kb_id: hemodialysis,
+    requirements: {equipment: ["dialysis machine", "hemodialyzer", "ro water plant"], procedures: ["hemodialysis", "haemodialysis", "crrt", "dialysis"],
+                   specialties: ["nephrology", "pediatric nephrology"], capabilities: ["dialysis unit", "dialysis centre", "renal care"]}}
+  cardiac_catheterization: {name: "Cardiac catheterization (cath lab / angioplasty)", category: "Cardiology", kb_id: cardiac_catheterization,
+    requirements: {equipment: ["cath lab", "flat panel", "biplane"], procedures: ["coronary angiography", "angioplasty", "ptca", "stenting"],
+                   specialties: ["interventional cardiology", "cardiology"], capabilities: ["24x7 cath lab", "cardiac icu", "ccu"]}}
+  emergency_department: {name: "Emergency department", category: "Emergency & trauma", kb_id: emergency_department,
+    requirements: {equipment: ["defibrillator", "ventilator"], procedures: ["resuscitation", "triage"],
+                   specialties: ["emergency medicine"], capabilities: ["24x7 emergency", "casualty", "emergency department"]}}
+  ct_scan: {name: "CT scan", category: "Diagnostic imaging", kb_id: ct_scan,
+    requirements: {equipment: ["ct scanner", "computed tomography"], procedures: ["ct scan", "hrct"],
+                   specialties: ["radiology", "diagnostic radiology"], capabilities: ["ct imaging"]}}
+  mri: {name: "MRI", category: "Diagnostic imaging", kb_id: mri,
+    requirements: {equipment: ["mri scanner", "tesla mri"], procedures: ["mri scan", "magnetic resonance imaging"],
+                   specialties: ["radiology", "diagnostic radiology"], capabilities: ["mri centre", "imaging department"]}}
+  nicu: {name: "Newborn intensive care (NICU)", category: "Maternal & child health", kb_id: nicu,
+    requirements: {equipment: ["radiant warmer", "neonatal incubator", "neonatal ventilator", "phototherapy"], procedures: ["neonatal resuscitation", "exchange transfusion"],
+                   specialties: ["neonatology", "pediatrics"], capabilities: ["nicu", "neonatal intensive care"]}}
+  emergency_c_section_24x7: {name: "24x7 emergency C-section", category: "Maternal health", kb_id: null,
+    requirements: {equipment: ["operation theatre", "fetal monitor", "anesthesia workstation"], procedures: ["caesarean section", "cesarean section", "c section", "lscs", "emergency delivery"],
+                   specialties: ["gynecology and obstetrics", "obstetrics and gynecology", "obstetrics and maternity care"], capabilities: ["24x7 maternity", "labour room", "labor room", "obstetric icu"]}}
+  orthopedics: {name: "Orthopedics & fracture care", category: "Surgical specialties", kb_id: null,
+    requirements: {equipment: ["c arm", "traction"], procedures: ["fracture fixation", "joint replacement", "arthroscopy", "knee replacement", "hip replacement"],
+                   specialties: ["orthopedic surgery", "orthopedics", "orthopaedics"], capabilities: ["orthopedic department", "trauma ward"]}}
+  stroke_thrombolysis: {name: "Stroke thrombolysis", category: "Neurology", kb_id: null,
+    requirements: {equipment: ["ct scanner", "mri"], procedures: ["thrombolysis", "thrombectomy", "stroke management"],
+                   specialties: ["neurology", "vascular neurology", "neurosurgery"], capabilities: ["stroke unit", "stroke ready", "24x7 neurology"]}}
+  ophthalmology: {name: "Eye care (ophthalmology)", category: "Surgical specialties", kb_id: null,
+    requirements: {equipment: ["slit lamp", "phaco machine", "oct"], procedures: ["cataract surgery", "phacoemulsification", "glaucoma", "retina"],
+                   specialties: ["ophthalmology"], capabilities: ["eye hospital", "eye care"]}}
+  obstetrics: {name: "Obstetrics", category: "Maternal health", kb_id: null,
+    requirements: {equipment: ["fetal monitor", "ultrasound"], procedures: ["normal delivery", "caesarean section", "antenatal care"],
+                   specialties: ["gynecology and obstetrics", "obstetrics and gynecology"], capabilities: ["maternity", "labour room", "labor room"]}}
+  pediatrics: {name: "Paediatrics", category: "Child health", kb_id: null,
+    requirements: {equipment: ["infant warmer", "nebulizer"], procedures: ["immunization", "vaccination", "child care"],
+                   specialties: ["pediatrics", "paediatrics"], capabilities: ["pediatric ward", "children ward", "child health"]}}
+  dentistry: {name: "Dentistry", category: "Dental", kb_id: null,
+    requirements: {equipment: ["dental chair", "dental x ray", "rvg"], procedures: ["root canal", "tooth extraction", "scaling", "dental implant"],
+                   specialties: ["dentistry", "general dentistry"], capabilities: ["dental clinic", "dental care"]}}
+  ent: {name: "Ear, nose and throat (ENT)", category: "Surgical specialties", kb_id: null,
+    requirements: {equipment: ["audiometer", "endoscope"], procedures: ["tonsillectomy", "septoplasty", "sinus surgery", "audiometry"],
+                   specialties: ["otolaryngology", "ent"], capabilities: ["ent department"]}}
+  dermatology: {name: "Skin (dermatology)", category: "Medical specialties", kb_id: null,
+    requirements: {equipment: ["dermatoscope", "laser"], procedures: ["skin biopsy", "laser treatment", "chemical peel"],
+                   specialties: ["dermatology"], capabilities: ["skin clinic", "dermatology department"]}}
+  urology: {name: "Urology", category: "Surgical specialties", kb_id: null,
+    requirements: {equipment: ["lithotripter", "cystoscope", "urodynamics"], procedures: ["turp", "lithotripsy", "kidney stone removal", "cystoscopy"],
+                   specialties: ["urology"], capabilities: ["urology department"]}}
